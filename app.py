@@ -295,51 +295,58 @@ if uploaded_files and st.button("🚀 開始解析並合併轉檔"):
         df_result = df_result.sort_values(by=['排序權重', '品名規格', '價格'])
         df_result = df_result.drop_duplicates(subset=['供應商', '品牌分類', '品名規格']).drop(columns=['排序權重'])
 
-        # --- 側邊欄：內建網頁版交叉篩選器 (Slicer) ---
-        st.sidebar.header("🔍 篩選器 (Slicer)")
-        st.sidebar.markdown("點擊下方選單即可即時篩選表格")
+        # 把結果存入 session_state，這樣點擊其他按鈕時才不會重置網頁
+        st.session_state['df_result'] = df_result
+
+# 只要有暫存資料，就顯示 UI (移出 st.button 區塊)
+if 'df_result' in st.session_state:
+    df_result = st.session_state['df_result']
+
+    # --- 側邊欄：內建網頁版交叉篩選器 (Slicer) ---
+    st.sidebar.header("🔍 篩選器 (Slicer)")
+    st.sidebar.markdown("點擊下方選單即可即時篩選表格")
+    
+    selected_brands = st.sidebar.multiselect("📌 品牌分類", df_result['品牌分類'].unique())
+    selected_vendors = st.sidebar.multiselect("🏬 供應商", df_result['供應商'].unique())
+    
+    # 執行篩選
+    df_display = df_result.copy()
+    if selected_brands:
+        df_display = df_display[df_display['品牌分類'].isin(selected_brands)]
+    if selected_vendors:
+        df_display = df_display[df_display['供應商'].isin(selected_vendors)]
         
-        selected_brands = st.sidebar.multiselect("📌 品牌分類", df_result['品牌分類'].unique())
-        selected_vendors = st.sidebar.multiselect("🏬 供應商", df_result['供應商'].unique())
-        
-        # 執行篩選
-        df_display = df_result.copy()
-        if selected_brands:
-            df_display = df_display[df_display['品牌分類'].isin(selected_brands)]
-        if selected_vendors:
-            df_display = df_display[df_display['供應商'].isin(selected_vendors)]
-            
-        st.success(f"✅ 成功清洗並去重，共取得 {len(df_result)} 筆精簡報價資料！(當前篩選顯示 {len(df_display)} 筆)")
-        
-        # 產生 Excel 並提供下載
-        excel_bytes = generate_excel(df_result)
-        st.download_button(
-            label="📥 點擊下載彙總精簡版 Excel (已內建正式表格)",
-            data=excel_bytes,
-            file_name="雪茄批發報價彙總_精簡版.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        
-        st.markdown("---")
-        
-        # --- 網頁版跨店比價矩陣 (Pivot Table) ---
-        st.subheader("📊 跨店比價矩陣 (橫向對比)")
-        st.markdown("將同一款雪茄在不同店家的報價「橫向展開」，一眼看出哪家有貨與最低價！")
-        
-        # 製作樞紐分析表
-        pivot_df = df_display.pivot_table(
-            index=['品牌分類', '品名規格'], 
-            columns='供應商', 
-            values='價格', 
-            aggfunc='min'
-        )
-        
-        # 轉換為支援空值的整數格式，方便網頁乾淨顯示
-        pivot_df = pivot_df.astype('Int64')
-        st.dataframe(pivot_df, use_container_width=True)
-        
-        st.markdown("---")
-        
-        # --- 全品項清單展示 ---
-        st.subheader("📋 篩選後全品項清單")
-        st.table(df_display)
+    st.success(f"✅ 成功清洗並去重，共取得 {len(df_result)} 筆精簡報價資料！(當前篩選顯示 {len(df_display)} 筆)")
+    
+    # 產生 Excel 並提供下載
+    excel_bytes = generate_excel(df_display)  # 修改為下載「篩選後」的結果
+    st.download_button(
+        label="📥 點擊下載彙總精簡版 Excel (已內建正式表格)",
+        data=excel_bytes,
+        file_name="雪茄批發報價彙總_精簡版.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
+    st.markdown("---")
+    
+    # --- 網頁版跨店比價矩陣 (Pivot Table) ---
+    st.subheader("📊 跨店比價矩陣 (橫向對比)")
+    st.markdown("將同一款雪茄在不同店家的報價「橫向展開」，一眼看出哪家有貨與最低價！")
+    
+    # 製作樞紐分析表
+    pivot_df = df_display.pivot_table(
+        index=['品牌分類', '品名規格'], 
+        columns='供應商', 
+        values='價格', 
+        aggfunc='min'
+    )
+    
+    # 轉換為支援空值的整數格式，方便網頁乾淨顯示
+    pivot_df = pivot_df.astype('Int64')
+    st.dataframe(pivot_df, use_container_width=True)
+    
+    st.markdown("---")
+    
+    # --- 全品項清單展示 ---
+    st.subheader("📋 篩選後全品項清單")
+    st.table(df_display)
