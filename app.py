@@ -19,54 +19,215 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 自訂 CSS 美化介面
+# ==========================================
+# 全域 CSS 樣式
+# ==========================================
 st.markdown("""
 <style>
-    /* 頂部標題區塊 */
-    .main-header {
-        background: linear-gradient(135deg, #1F4E78 0%, #2C5E3B 100%);
-        padding: 1.5rem 2rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
-        color: white;
-    }
-    .main-header h1 { color: white; margin: 0; font-size: 1.8rem; }
-    .main-header p { color: #E0E0E0; margin: 0.3rem 0 0 0; font-size: 0.95rem; }
+    /* ===== 全域字體與背景 ===== */
+    .block-container { padding-top: 1rem; }
     
-    /* KPI 卡片 */
+    /* ===== 頂部 Hero 橫幅 ===== */
+    .hero {
+        background: linear-gradient(135deg, #0F2027 0%, #203A43 40%, #2C5364 100%);
+        padding: 2rem 2.5rem;
+        border-radius: 16px;
+        margin-bottom: 1.8rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .hero::before {
+        content: '';
+        position: absolute;
+        top: -50%; right: -20%;
+        width: 400px; height: 400px;
+        background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .hero h1 {
+        color: #FFFFFF;
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 0.4rem 0;
+        letter-spacing: 0.5px;
+    }
+    .hero .subtitle {
+        color: rgba(255,255,255,0.75);
+        font-size: 0.95rem;
+        margin: 0;
+        line-height: 1.6;
+    }
+    .hero .badge {
+        display: inline-block;
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.25);
+        color: #FFFFFF;
+        padding: 0.2rem 0.7rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        margin-top: 0.8rem;
+        backdrop-filter: blur(4px);
+    }
+    
+    /* ===== KPI 卡片 ===== */
     [data-testid="stMetric"] {
-        background: #F8F9FA;
-        border: 1px solid #E9ECEF;
+        background: linear-gradient(145deg, #FFFFFF, #F8FAFE);
+        border: 1px solid #E3E8F0;
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    [data-testid="stMetric"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 0.8rem !important;
+        color: #6B7280 !important;
+        font-weight: 500 !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-size: 1.4rem !important;
+        font-weight: 700 !important;
+        color: #1F2937 !important;
+    }
+    
+    /* ===== 側邊欄 ===== */
+    section[data-testid="stSidebar"] > div:first-child {
+        background: linear-gradient(180deg, #F0F4F8 0%, #FFFFFF 100%);
+    }
+    .sidebar-title {
+        background: linear-gradient(135deg, #0F2027, #2C5364);
+        color: white;
+        padding: 0.6rem 1rem;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+        text-align: center;
+    }
+    .sidebar-section {
+        background: white;
+        border: 1px solid #E5E7EB;
         border-radius: 10px;
         padding: 0.8rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-    [data-testid="stMetricLabel"] { font-size: 0.85rem !important; }
-    
-    /* 側邊欄美化 */
-    section[data-testid="stSidebar"] > div {
-        background: linear-gradient(180deg, #F8F9FA 0%, #FFFFFF 100%);
+        margin-bottom: 0.8rem;
     }
     
-    /* 表格美化 */
-    .stDataFrame { border-radius: 8px; overflow: hidden; }
-    
-    /* 按鈕美化 */
+    /* ===== 下載按鈕 ===== */
     .stDownloadButton > button {
         background: linear-gradient(135deg, #1F4E78, #2C5E3B) !important;
         color: white !important;
         border: none !important;
-        border-radius: 8px !important;
-        padding: 0.5rem 1.5rem !important;
+        border-radius: 10px !important;
+        padding: 0.6rem 1.5rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s !important;
+        box-shadow: 0 2px 8px rgba(31,78,120,0.3) !important;
+    }
+    .stDownloadButton > button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 16px rgba(31,78,120,0.4) !important;
+    }
+    
+    /* ===== 分區標題 ===== */
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.8rem 0;
+        margin: 0.5rem 0;
+        border-bottom: 2px solid #E5E7EB;
+    }
+    .section-header .icon {
+        font-size: 1.5rem;
+    }
+    .section-header .text {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1F2937;
+    }
+    .section-header .desc {
+        font-size: 0.82rem;
+        color: #6B7280;
+        margin-left: auto;
+    }
+    
+    /* ===== 資訊卡 (空狀態) ===== */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #9CA3AF;
+    }
+    .empty-state .icon { font-size: 4rem; margin-bottom: 1rem; }
+    .empty-state .title { font-size: 1.2rem; font-weight: 600; color: #6B7280; }
+    .empty-state .desc { font-size: 0.9rem; margin-top: 0.5rem; }
+    
+    /* ===== 狀態標籤 ===== */
+    .status-bar {
+        background: linear-gradient(90deg, #ECFDF5, #F0FDF4);
+        border: 1px solid #A7F3D0;
+        border-radius: 10px;
+        padding: 0.7rem 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.8rem 0;
+    }
+    .status-bar .dot {
+        width: 8px; height: 8px;
+        background: #10B981;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .status-bar .text {
+        font-size: 0.88rem;
+        color: #065F46;
+        font-weight: 500;
+    }
+    
+    /* ===== Tabs 標籤美化 ===== */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0;
+        background: #F3F4F6;
+        border-radius: 12px;
+        padding: 4px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 600;
+    }
+    .stTabs [aria-selected="true"] {
+        background: white !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* ===== 頁腳 ===== */
+    .footer {
+        text-align: center;
+        padding: 1.5rem 0;
+        color: #9CA3AF;
+        font-size: 0.8rem;
+        border-top: 1px solid #F3F4F6;
+        margin-top: 2rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 頂部標題
+# ===== Hero 標題橫幅 =====
 st.markdown("""
-<div class="main-header">
-    <h1>🍂 雪茄批發報價單自動清洗與彙整工具</h1>
-    <p>上傳各家 Excel / PDF 報價單 ➔ 自動辨識 30 個品牌 + 10 大供應商 ➔ 產出精簡版 Excel・即時比價矩陣・數據儀表板</p>
+<div class="hero">
+    <h1>🍂 雪茄批發報價自動彙整系統</h1>
+    <p class="subtitle">
+        上傳各家 Excel / PDF 報價單 → 自動辨識 30 個品牌 + 10 大供應商 → 即時比價矩陣 · 數據儀表板 · 一鍵下載精簡版 Excel
+    </p>
+    <span class="badge">⚡ v2.1 — 支援多檔上傳 · 品名搜尋 · 價格區間 · 最低價高亮</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -102,12 +263,9 @@ def get_standard_vendor(filename):
     for key, standard_name in VENDOR_RULES.items():
         if key in filename:
             return standard_name
-    # 清理檔名中常見的雜訊
     name = filename.split('.')[0]
-    # 移除日期格式 (例如 9.20、09.24、2024)
     name = re.sub(r'\d{1,2}\.\d{1,2}', '', name)
     name = re.sub(r'20\d{2}', '', name)
-    # 移除常見贅字
     for noise in ['报价', '报價', '港币', '港幣', '最新', '澳门', '澳門', '批发', '批發', '价格', '價格', '号', '號', '(1)', '（1）']:
         name = name.replace(noise, '')
     return name.strip() or filename.split('.')[0]
@@ -124,7 +282,6 @@ def classify_brand(pname):
     if any(k in text for k in ['多米尼加之花', '多明尼加之花', 'flor dominicana']): return '多明尼加之花'
     if any(k in text for k in ['狮子王', '獅子王', '拉奥罗拉', 'aurora']): return '獅子王'
     
-    # 避免「好友蒙特利」誤判為「蒙特」
     if any(k in text for k in ['好友', 'hoyo', 'epicure', '逍遥', '赛科', '聖胡安', '帕尔马斯']):
         if not any(k in text for k in ['蒙特克里斯托', 'montecristo', '蒙特2号', '蒙特4号']): 
             return '好友'
@@ -166,13 +323,10 @@ def generate_excel(df_list):
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
     
-    # 建立樣式
     header_font = Font(name='Microsoft JhengHei', size=11, bold=True, color='FFFFFF')
     body_font = Font(name='Microsoft JhengHei', size=10)
     bold_font = Font(name='Microsoft JhengHei', size=10, bold=True)
-    
     accent_fill = PatternFill(start_color='2C5E3B', end_color='2C5E3B', fill_type='solid')
-    
     thin_border = Border(left=Side(style='thin', color='D9D9D9'), right=Side(style='thin', color='D9D9D9'),
                          top=Side(style='thin', color='D9D9D9'), bottom=Side(style='thin', color='D9D9D9'))
 
@@ -198,7 +352,6 @@ def generate_excel(df_list):
             elif c == 4:
                 cell.alignment, cell.number_format = Alignment(horizontal='right', vertical='center'), '#,##0'
 
-    # 建立正式表格 (等同於在 Excel 中按下 Ctrl+T)，方便後續插入篩選器
     if ws_list.max_row > 1:
         tab_list = Table(displayName="DataList", ref=f"A1:E{ws_list.max_row}")
         tab_list.tableStyleInfo = TableStyleInfo(name="TableStyleMedium9", showRowStripes=True)
@@ -210,7 +363,6 @@ def generate_excel(df_list):
     headers_sum = ['品牌名稱', '品項總報價數', '最低報價(HKD)', '最高報價(HKD)', '平均報價(HKD)']
     ws_sum.append(headers_sum)
     
-    # 統計邏輯
     for brand in TARGET_BRANDS + ["其他品牌"]:
         subset = df_list[df_list['品牌分類'] == brand]
         if not subset.empty:
@@ -233,7 +385,6 @@ def generate_excel(df_list):
     ws_sum.auto_filter.ref = f"A1:E{ws_sum.max_row}"
     ws_sum.freeze_panes = 'A2'
 
-    # --- 調整自動欄寬 ---
     for ws in [ws_list, ws_sum]:
         for col in ws.columns:
             max_len = max((sum(2 if ord(ch) > 127 else 1 for ch in str(c.value or '')) for c in col), default=0)
@@ -259,38 +410,65 @@ def extract_price(val):
     return int(float(cv))
 
 # ==========================================
-# 4. 網頁前端與自動解析執行
+# 4. 側邊欄：上傳 + 篩選
 # ==========================================
 
-# 側邊欄上方：檔案上傳區
-st.sidebar.markdown("### 📂 檔案上傳區")
+# --- 側邊欄品牌 Logo ---
+st.sidebar.markdown('<div class="sidebar-title">🍂 雪茄報價系統</div>', unsafe_allow_html=True)
+
+# --- 上傳區 ---
+st.sidebar.markdown("##### 📂 上傳報價單")
 uploaded_files = st.sidebar.file_uploader(
-    "拖曳或點擊上傳報價單", 
+    "拖曳或點擊上傳", 
     type=["xlsx", "xls", "pdf"], 
     accept_multiple_files=True,
-    help="支援 Excel (.xlsx, .xls) 和 PDF 格式，可一次上傳多個檔案"
+    help="支援 Excel (.xlsx, .xls) 和 PDF 格式，可一次上傳多個檔案",
+    label_visibility="collapsed"
 )
+
+if uploaded_files:
+    st.sidebar.caption(f"📎 已選取 **{len(uploaded_files)}** 個檔案")
+    with st.sidebar.expander("查看檔案清單", expanded=False):
+        for f in uploaded_files:
+            size_kb = f.size / 1024
+            icon = "📗" if f.name.endswith(('.xlsx', '.xls')) else "📕"
+            st.caption(f"{icon} {f.name} ({size_kb:.0f} KB)")
 
 parse_button = st.sidebar.button("🚀 開始解析並合併轉檔", use_container_width=True, type="primary")
 
-# 側邊欄下方：顯示解析進度 / 檔案資訊
-if uploaded_files:
-    st.sidebar.markdown("---")
-    st.sidebar.markdown(f"**已選取 {len(uploaded_files)} 個檔案：**")
-    for f in uploaded_files:
-        size_kb = f.size / 1024
-        icon = "📗" if f.name.endswith(('.xlsx', '.xls')) else "📕"
-        st.sidebar.caption(f"{icon} {f.name} ({size_kb:.0f} KB)")
+# ==========================================
+# 5. 主畫面：空狀態 / 解析 / 結果
+# ==========================================
 
-# 主畫面上方的操作提示
-if not uploaded_files:
-    st.info("👈 請在左側上傳報價單檔案，支援 Excel 和 PDF 格式。上傳後點擊「🚀 開始解析」即可開始！")
+# --- 空狀態引導 ---
+if not uploaded_files and 'df_result' not in st.session_state:
+    st.markdown("""
+    <div class="empty-state">
+        <div class="icon">📂</div>
+        <div class="title">尚未上傳任何報價單</div>
+        <div class="desc">👈 請在左側面板上傳 Excel 或 PDF 報價單，支援一次多檔上傳</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 功能特色介紹
+    st.markdown("---")
+    feat_col1, feat_col2, feat_col3 = st.columns(3)
+    with feat_col1:
+        st.markdown("#### 🤖 智慧解析引擎")
+        st.markdown("自動辨識 **30 個品牌** + **10 大供應商**，無論報價單格式如何混亂，都能精準萃取品名、價格與產地。")
+    with feat_col2:
+        st.markdown("#### 📊 即時比價矩陣")
+        st.markdown("同一款雪茄在不同店家的報價橫向展開，**最低價自動高亮**，一眼看出誰家最便宜。")
+    with feat_col3:
+        st.markdown("#### 📥 一鍵匯出 Excel")
+        st.markdown("下載的 Excel 已內建正式表格格式，直接就能使用 **交叉分析篩選器 (Slicer)**。")
 
+# --- 解析執行 ---
 if parse_button and uploaded_files:
     all_records = []
-    file_stats = []  # 記錄每個檔案的解析統計
+    file_stats = []
     
-    progress_bar = st.progress(0, text="正在解析檔案...")
+    progress_bar = st.progress(0, text="⏳ 正在解析檔案...")
     
     for idx, file in enumerate(uploaded_files):
         vendor = get_standard_vendor(file.name)
@@ -371,7 +549,6 @@ if parse_button and uploaded_files:
                     full_text = name + " " + " ".join(vals)
                     brand = classify_brand(full_text)
                     
-                    # 過濾純數字(數量)或品牌名稱，保留真正的產地版本
                     origin_candidates = [v for v in vals if len(v) < 15 and not v.isdigit() and not any(b in v for b in TARGET_BRANDS)]
                     if origin_candidates: 
                         origin = " ".join(origin_candidates)
@@ -384,77 +561,61 @@ if parse_button and uploaded_files:
                     
             file_stats.append({"檔名": file.name, "供應商": vendor, "抓取筆數": file_record_count, "狀態": "✅ 成功"})
         except Exception as e:
-            file_stats.append({"檔名": file.name, "供應商": vendor, "抓取筆數": 0, "狀態": f"❌ 失敗: {e}"})
+            file_stats.append({"檔名": file.name, "供應商": vendor, "抓取筆數": 0, "狀態": f"❌ {e}"})
             
-        # 更新進度條
         progress_bar.progress((idx + 1) / len(uploaded_files), text=f"正在解析：{file.name} ({idx+1}/{len(uploaded_files)})")
     
     progress_bar.empty()
-
-    # 顯示各檔案解析結果報告
     st.session_state['file_stats'] = file_stats
 
     if all_records:
         df_result = pd.DataFrame(all_records)
-        
-        # 依 30 個品牌排序並去重複
         brand_order_map = {b: i for i, b in enumerate(TARGET_BRANDS)}
         brand_order_map['其他品牌'] = 999
         df_result['排序權重'] = df_result['品牌分類'].map(brand_order_map)
-        
-        # 執行排序與去重
         df_result = df_result.sort_values(by=['排序權重', '品名規格', '價格'])
         df_result = df_result.drop_duplicates(subset=['供應商', '品牌分類', '品名規格']).drop(columns=['排序權重'])
-
-        # 把結果存入 session_state
         st.session_state['df_result'] = df_result
     else:
         st.warning("⚠️ 所有檔案均未成功解析出有效資料，請檢查檔案格式。")
 
 # ==========================================
-# 5. 結果展示區（使用 session_state 持久化）
+# 6. 結果展示區
 # ==========================================
 if 'df_result' in st.session_state:
     df_result = st.session_state['df_result']
 
-    # --- 顯示解析報告 (可收合) ---
+    # --- 解析報告 ---
     if 'file_stats' in st.session_state:
-        with st.expander("📋 各檔案解析結果報告", expanded=False):
+        with st.expander("📋 解析報告：各檔案處理明細", expanded=False):
             stats_df = pd.DataFrame(st.session_state['file_stats'])
             st.dataframe(stats_df, use_container_width=True, hide_index=True)
             total_parsed = stats_df['抓取筆數'].sum()
             success_count = stats_df[stats_df['狀態'] == '✅ 成功'].shape[0]
-            st.caption(f"共解析 {len(stats_df)} 個檔案，{success_count} 個成功，原始抓取 {total_parsed} 筆 → 去重後 {len(df_result)} 筆")
+            st.caption(f"共處理 {len(stats_df)} 個檔案 · {success_count} 個成功 · 原始抓取 {total_parsed} 筆 → 去重後 {len(df_result)} 筆")
 
-    # --- 側邊欄：篩選器 ---
+    # --- 側邊欄篩選器 ---
     st.sidebar.markdown("---")
-    st.sidebar.header("🔍 篩選器 (Slicer)")
+    st.sidebar.markdown("##### 🔍 篩選器")
     
-    # 品牌篩選
     all_brands = sorted(df_result['品牌分類'].unique())
-    selected_brands = st.sidebar.multiselect("📌 品牌分類", all_brands)
+    selected_brands = st.sidebar.multiselect("品牌分類", all_brands, placeholder="選擇品牌...")
     
-    # 供應商篩選
     all_vendors = sorted(df_result['供應商'].unique())
-    selected_vendors = st.sidebar.multiselect("🏬 供應商", all_vendors)
+    selected_vendors = st.sidebar.multiselect("供應商", all_vendors, placeholder="選擇供應商...")
     
-    # 價格區間篩選
-    st.sidebar.markdown("**💰 價格區間 (HKD)**")
     price_min = int(df_result['價格'].min())
     price_max = int(df_result['價格'].max())
     price_range = st.sidebar.slider(
-        "拖曳調整價格範圍",
+        "💰 價格區間 (HKD)",
         min_value=price_min, max_value=price_max, 
         value=(price_min, price_max),
-        step=50,
-        format="$%d"
+        step=50, format="$%d"
     )
     
-    # 品名關鍵字搜尋
-    keyword = st.sidebar.text_input("🔎 品名關鍵字搜尋", placeholder="例如：短丘、D4、BHK、鋁管")
+    keyword = st.sidebar.text_input("🔎 品名搜尋", placeholder="短丘、D4、BHK...")
     
-    # 一鍵清除篩選
-    if st.sidebar.button("🗑️ 清除所有篩選條件", use_container_width=True):
+    if st.sidebar.button("🗑️ 清除篩選", use_container_width=True):
         st.rerun()
     
     # 執行篩選
@@ -466,40 +627,58 @@ if 'df_result' in st.session_state:
     df_display = df_display[(df_display['價格'] >= price_range[0]) & (df_display['價格'] <= price_range[1])]
     if keyword:
         df_display = df_display[df_display['品名規格'].str.contains(keyword, case=False, na=False)]
+    
+    # --- 狀態列 ---
+    filter_tags = []
+    if selected_brands: filter_tags.append(f"品牌: {', '.join(selected_brands)}")
+    if selected_vendors: filter_tags.append(f"供應商: {', '.join(selected_vendors)}")
+    if price_range != (price_min, price_max): filter_tags.append(f"價格: ${price_range[0]:,}~${price_range[1]:,}")
+    if keyword: filter_tags.append(f"搜尋: {keyword}")
+    
+    filter_text = f" · 篩選條件：{'、'.join(filter_tags)}" if filter_tags else ""
+    st.markdown(f"""
+    <div class="status-bar">
+        <div class="dot"></div>
+        <span class="text">已載入 {len(df_result)} 筆資料 → 顯示 {len(df_display)} 筆{filter_text}</span>
+    </div>
+    """, unsafe_allow_html=True)
         
-    # --- KPI 數據儀表板 ---
-    st.markdown("### 📈 數據總覽 Dashboard")
+    # --- KPI 儀表板 ---
+    st.markdown("""
+    <div class="section-header">
+        <span class="icon">📈</span>
+        <span class="text">數據總覽</span>
+        <span class="desc">即時更新 · 隨篩選條件連動</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("📦 篩選品項數", f"{len(df_display)} 筆")
-    col2.metric("🏢 涵蓋供應商", f"{df_display['供應商'].nunique()} 家")
-    col3.metric("🏷️ 涵蓋品牌數", f"{df_display['品牌分類'].nunique()} 個")
+    col1.metric("篩選品項", f"{len(df_display)} 筆")
+    col2.metric("供應商數", f"{df_display['供應商'].nunique()} 家")
+    col3.metric("品牌數", f"{df_display['品牌分類'].nunique()} 個")
     
     if not df_display.empty:
-        col4.metric("⬇️ 最低報價", f"${int(df_display['價格'].min()):,}")
-        col5.metric("⬆️ 最高報價", f"${int(df_display['價格'].max()):,}")
+        col4.metric("最低價", f"${int(df_display['價格'].min()):,}")
+        col5.metric("最高價", f"${int(df_display['價格'].max()):,}")
     else:
-        col4.metric("⬇️ 最低報價", "$0")
-        col5.metric("⬆️ 最高報價", "$0")
-    
-    st.caption(f"📊 總庫存 {len(df_result)} 筆 → 篩選顯示 {len(df_display)} 筆 | 平均報價 ${int(df_display['價格'].mean()) if not df_display.empty else 0:,} HKD")
+        col4.metric("最低價", "—")
+        col5.metric("最高價", "—")
         
-    # --- 下載按鈕區 ---
-    dl_col1, dl_col2 = st.columns(2)
-    
+    # --- 下載區 ---
     today_str = datetime.now().strftime("%Y%m%d")
+    dl_col1, dl_col2, dl_col3 = st.columns([2, 2, 3])
     
     with dl_col1:
         excel_bytes = generate_excel(df_display)
         st.download_button(
-            label="📥 下載彙總精簡版 Excel",
+            label="📥 下載精簡版 Excel",
             data=excel_bytes,
-            file_name=f"雪茄批發報價彙總_精簡版_{today_str}.xlsx",
+            file_name=f"雪茄報價彙總_{today_str}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )
     
     with dl_col2:
-        # 樞紐分析表下載
         if not df_display.empty:
             pivot_dl = df_display.pivot_table(
                 index=['品牌分類', '品名規格'], columns='供應商', values='價格', aggfunc='min'
@@ -508,7 +687,7 @@ if 'df_result' in st.session_state:
             with pd.ExcelWriter(output_pivot, engine='openpyxl') as writer:
                 pivot_dl.to_excel(writer, sheet_name="跨店比價矩陣")
             st.download_button(
-                label="📥 下載跨店比價矩陣 Excel",
+                label="📥 下載比價矩陣 Excel",
                 data=output_pivot.getvalue(),
                 file_name=f"跨店比價矩陣_{today_str}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -516,8 +695,13 @@ if 'df_result' in st.session_state:
                 use_container_width=True
             )
     
+    with dl_col3:
+        if not df_display.empty:
+            avg_p = int(df_display['價格'].mean())
+            st.markdown(f"<div style='text-align:center; padding:0.5rem; color:#6B7280; font-size:0.85rem;'>📊 平均報價 <b style=\"color:#1F2937; font-size:1.1rem;\">${avg_p:,} HKD</b></div>", unsafe_allow_html=True)
+    
     # --- 圖表分析 ---
-    with st.expander("📊 查看品牌報價數量分佈圖 & 供應商品項數對比"):
+    with st.expander("📊 數據視覺化分析"):
         chart_col1, chart_col2 = st.columns(2)
         with chart_col1:
             st.markdown("**各品牌報價數量**")
@@ -528,15 +712,21 @@ if 'df_result' in st.session_state:
             vendor_counts = df_display['供應商'].value_counts()
             st.bar_chart(vendor_counts)
     
-    st.markdown("---")
+    # --- 主要資料區：分頁標籤 ---
+    st.markdown("""
+    <div class="section-header">
+        <span class="icon">📋</span>
+        <span class="text">資料檢視</span>
+        <span class="desc">切換標籤查看不同視圖</span>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # --- 分頁標籤切換不同視圖 ---
     tab1, tab2 = st.tabs(["📊 跨店比價矩陣", "📋 全品項清單"])
     
     with tab1:
-        st.markdown("將同一款雪茄在不同店家的報價「橫向展開」，一眼看出哪家有貨與最低價！")
-        
         if not df_display.empty:
+            st.caption("💡 綠底粗體 = 該品項各供應商中的最低報價")
+            
             pivot_df = df_display.pivot_table(
                 index=['品牌分類', '品名規格'], 
                 columns='供應商', 
@@ -545,7 +735,6 @@ if 'df_result' in st.session_state:
             )
             pivot_df = pivot_df.astype('Int64')
             
-            # 用 Styler 標記每行最低價 (高亮綠色)
             def highlight_min(row):
                 numeric_vals = row.dropna()
                 if numeric_vals.empty:
@@ -560,6 +749,7 @@ if 'df_result' in st.session_state:
     
     with tab2:
         if not df_display.empty:
+            st.caption(f"共 {len(df_display)} 筆資料")
             st.dataframe(
                 df_display.reset_index(drop=True), 
                 use_container_width=True, 
@@ -571,4 +761,9 @@ if 'df_result' in st.session_state:
 
 # --- 頁腳 ---
 st.sidebar.markdown("---")
-st.sidebar.caption(f"🍂 雪茄報價系統 v2.0\n\n更新時間：{datetime.now().strftime('%Y-%m-%d %H:%M')}")
+st.sidebar.caption(f"🍂 v2.1 | {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+st.markdown(f"""
+<div class="footer">
+    🍂 雪茄批發報價自動彙整系統 v2.1 · Built with Streamlit · {datetime.now().strftime('%Y-%m-%d')}
+</div>
+""", unsafe_allow_html=True)
