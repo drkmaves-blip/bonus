@@ -6,10 +6,12 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 import io
 import re
+import os
+import unicodedata
 import pdfplumber
 from datetime import datetime
 
-APP_VERSION = "v2.2"
+APP_VERSION = "v2.3"
 
 # ==========================================
 # 1. 基本設定
@@ -175,13 +177,54 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. 品牌與供應商設定
+# 2. 品牌與供應商設定 (動態載入 brand_rules.csv)
 # ==========================================
-TARGET_BRANDS = [
-    "千里達", "大衛杜夫", "比雅達", "世界之王", "卡諾之花", "古巴榮耀", "外交官", "多明尼加之花", "多爾賽碼頭", "好友",
-    "我的父親", "帕特加斯", "拉斐爾", "金特羅", "威古洛", "玻利瓦", "胡安洛佩斯", "庫阿巴", "烏普曼", "高希霸",
-    "富恩特", "獅子王", "雷蒙阿隆尼", "蒙特", "潑辣", "潘趣", "潮牌CAO", "豐塞卡", "羅密歐與茱麗葉", "羅賓納"
+RULES_FILE = 'brand_rules.csv'
+
+DEFAULT_BRAND_RULES = [
+    # 順序很重要：例如 "好友" 必須在 "蒙特" 前面，避免 "好友蒙特利" 誤判為蒙特
+    {"品牌分類": "富恩特", "關鍵字": "富恩特, fuente, 海明威"},
+    {"品牌分類": "我的父親", "關鍵字": "我的父亲, 我的父親, my father"},
+    {"品牌分類": "多明尼加之花", "關鍵字": "多米尼加之花, 多明尼加之花, flor dominicana"},
+    {"品牌分類": "獅子王", "關鍵字": "狮子王, 獅子王, 拉奥罗拉, aurora"},
+    {"品牌分類": "好友", "關鍵字": "好友, hoyo, epicure, 逍遥, 赛科, 聖胡安, 帕尔马斯"},
+    {"品牌分類": "潑辣", "關鍵字": "泼辣, 潑辣, 波尔, larranaga"},
+    {"品牌分類": "高希霸", "關鍵字": "高希霸, cohiba, bhk, 世纪, 半世纪, 魔术师, 导师"},
+    {"品牌分類": "千里達", "關鍵字": "千里达, 千里達, 特立尼达, trinidad, 3t, 雷耶斯, 暗礁"},
+    {"品牌分類": "蒙特", "關鍵字": "蒙特, montecristo, 艾蒙多, 1935, 大仲马, 蒙特2号, 蒙特4号"},
+    {"品牌分類": "帕特加斯", "關鍵字": "帕特加斯, partagas, 路西塔尼亚, d4, p2, e2"},
+    {"品牌分類": "羅密歐與茱麗葉", "關鍵字": "罗密欧, 羅密歐, romeo, 短丘, 宽丘, 丘比特"},
+    {"品牌分類": "烏普曼", "關鍵字": "乌普曼, 烏普曼, upmann, 玛瑙, 鉴赏家, 半皇冠"},
+    {"品牌分類": "玻利瓦", "關鍵字": "玻利瓦, bolivar"},
+    {"品牌分類": "雷蒙阿隆尼", "關鍵字": "雷蒙, allones"},
+    {"品牌分類": "多爾賽碼頭", "關鍵字": "多尔塞, quai, d'orsay, 码头"},
+    {"品牌分類": "潘趣", "關鍵字": "潘趣, punch"},
+    {"品牌分類": "庫阿巴", "關鍵字": "库阿巴, cuaba"},
+    {"品牌分類": "威古洛", "關鍵字": "威古洛, vegueros"},
+    {"品牌分類": "胡安洛佩斯", "關鍵字": "胡安, juan lopez"},
+    {"品牌分類": "外交官", "關鍵字": "外交官, diplomaticos"},
+    {"品牌分類": "比雅達", "關鍵字": "比亚达, 比雅達, piedra, 猎人"},
+    {"品牌分類": "金特羅", "關鍵字": "金特罗, quintero, 挚爱"},
+    {"品牌分類": "世界之王", "關鍵字": "世界之王, rey del mundo"},
+    {"品牌分類": "卡諾之花", "關鍵字": "卡诺之花, flor de cano"},
+    {"品牌分類": "古巴榮耀", "關鍵字": "古巴荣耀, gloria cubana"},
+    {"品牌分類": "拉斐爾", "關鍵字": "拉斐尔, rafael gonzalez"},
+    {"品牌分類": "豐塞卡", "關鍵字": "丰塞卡, fonseca"},
+    {"品牌分類": "羅賓納", "關鍵字": "罗宾纳, robaina"},
+    {"品牌分類": "大衛杜夫", "關鍵字": "大卫杜夫, davidoff"},
+    {"品牌分類": "潮牌CAO", "關鍵字": "潮牌, cao"},
 ]
+
+def load_brand_rules():
+    if not os.path.exists(RULES_FILE):
+        pd.DataFrame(DEFAULT_BRAND_RULES).to_csv(RULES_FILE, index=False, encoding='utf-8-sig')
+    try:
+        return pd.read_csv(RULES_FILE)
+    except Exception:
+        return pd.DataFrame(DEFAULT_BRAND_RULES)
+
+df_brand_rules = load_brand_rules()
+TARGET_BRANDS = df_brand_rules['品牌分類'].tolist()
 
 VENDOR_RULES = {
     "天空": "古巴天空",
@@ -214,50 +257,91 @@ def get_standard_vendor(filename):
     return name.strip(' -_') or filename.rsplit('.', 1)[0]
 
 def classify_brand(pname):
-    """根據品名關鍵字，嚴格匹配 30 個指定品牌"""
+    """根據 CSV 設定的品牌關鍵字，嚴格匹配 (順序依 CSV 排列)"""
     text = str(pname).lower()
 
-    if any(k in text for k in ['富恩特', 'fuente', '海明威']): return '富恩特'
-    if any(k in text for k in ['我的父亲', '我的父親', 'my father']): return '我的父親'
-    if any(k in text for k in ['多米尼加之花', '多明尼加之花', 'flor dominicana']): return '多明尼加之花'
-    if any(k in text for k in ['狮子王', '獅子王', '拉奥罗拉', 'aurora']): return '獅子王'
+    # 針對「好友蒙特利」的特例處理（避免誤判為蒙特）
+    is_hoyo = any(k in text for k in ['好友', 'hoyo', 'epicure', '逍遥', '赛科', '聖胡安', '帕尔马斯'])
+    is_monte = any(k in text for k in ['蒙特克里斯托', 'montecristo', '蒙特2号', '蒙特4号'])
+    if is_hoyo and not is_monte:
+        return '好友'
 
-    # 避免「好友蒙特利」誤判為「蒙特」
-    if any(k in text for k in ['好友', 'hoyo', 'epicure', '逍遥', '赛科', '聖胡安', '帕尔马斯']):
-        if not any(k in text for k in ['蒙特克里斯托', 'montecristo', '蒙特2号', '蒙特4号']):
-            return '好友'
-
-    if any(k in text for k in ['泼辣', '潑辣', '波尔', 'larranaga']): return '潑辣'
-    if any(k in text for k in ['高希霸', 'cohiba', 'bhk', '世纪', '半世纪', '魔术师', '导师']): return '高希霸'
-    if any(k in text for k in ['千里达', '千里達', '特立尼达', 'trinidad', '3t', '雷耶斯', '暗礁']): return '千里達'
-    if any(k in text for k in ['蒙特', 'montecristo', '艾蒙多', '1935', '大仲马']): return '蒙特'
-    if any(k in text for k in ['帕特加斯', 'partagas', '路西塔尼亚', 'd4', 'p2', 'e2']): return '帕特加斯'
-    if any(k in text for k in ['罗密欧', '羅密歐', 'romeo', '短丘', '宽丘', '丘比特']): return '羅密歐與茱麗葉'
-    if any(k in text for k in ['乌普曼', '烏普曼', 'upmann', '玛瑙', '鉴赏家', '半皇冠']): return '烏普曼'
-    if any(k in text for k in ['玻利瓦', 'bolivar']): return '玻利瓦'
-    if any(k in text for k in ['雷蒙', 'allones']): return '雷蒙阿隆尼'
-    if any(k in text for k in ['多尔塞', 'quai', "d'orsay", '码头']): return '多爾賽碼頭'
-    if any(k in text for k in ['潘趣', 'punch']): return '潘趣'
-    if any(k in text for k in ['库阿巴', 'cuaba']): return '庫阿巴'
-    if any(k in text for k in ['威古洛', 'vegueros']): return '威古洛'
-    if any(k in text for k in ['胡安', 'juan lopez']): return '胡安洛佩斯'
-    if any(k in text for k in ['外交官', 'diplomaticos']): return '外交官'
-    if any(k in text for k in ['比亚达', '比雅達', 'piedra', '猎人']): return '比雅達'
-    if any(k in text for k in ['金特罗', 'quintero', '挚爱']): return '金特羅'
-    if any(k in text for k in ['世界之王', 'rey del mundo']): return '世界之王'
-    if any(k in text for k in ['卡诺之花', 'flor de cano']): return '卡諾之花'
-    if any(k in text for k in ['古巴荣耀', 'gloria cubana']): return '古巴榮耀'
-    if any(k in text for k in ['拉斐尔', 'rafael gonzalez']): return '拉斐爾'
-    if any(k in text for k in ['丰塞卡', 'fonseca']): return '豐塞卡'
-    if any(k in text for k in ['罗宾纳', 'robaina']): return '羅賓納'
-    if any(k in text for k in ['大卫杜夫', 'davidoff']): return '大衛杜夫'
-    if any(k in text for k in ['潮牌', 'cao']): return '潮牌CAO'
+    for _, row in df_brand_rules.iterrows():
+        brand = row['品牌分類']
+        if brand == '好友': continue # 特例已處理
+        
+        # 解析關鍵字清單，忽略空值
+        keywords = [k.strip().lower() for k in str(row['關鍵字']).split(',') if k.strip()]
+        if any(k in text for k in keywords):
+            return brand
 
     return '其他品牌'
 
 # ==========================================
-# 3. 解析引擎
+# 3. 解析引擎與支數擷取
 # ==========================================
+CHANNEL_CLEAN_MAP = {
+    "国营": "古巴國營", "古巴国营": "古巴國營", "欧水": "歐洲水貨", "西行": "西行/西班牙", "西班牙": "西行/西班牙",
+    "英国免税": "英國免稅", "英免": "英國免稅", "英国": "英國免稅", "瑞士": "瑞士", "瑞行": "瑞士",
+    "葡萄牙": "葡萄牙", "葡萄牙行": "葡萄牙", "德国": "德國", "德行": "德國", "加勒比": "加勒比",
+    "加勒比海": "加勒比", "安道尔": "安道爾", "腓尼基": "腓尼基", "墨西哥": "墨西哥", "荷兰": "荷蘭",
+    "爱尔兰": "愛爾蘭", "加拿大": "加拿大", "意大利": "意大利", "法行": "法行", "巴西": "巴西",
+    "国营，欧水": "國營/歐水", "国营/欧水": "國營/歐水", "欧水，国营": "國營/歐水", "欧水/国营": "國營/歐水",
+    "国营，西行": "國營/西行", "国营/西行": "國營/西行", "国营，腓尼基": "國營/腓尼基", "国营/腓尼基": "國營/腓尼基",
+    "欧水，西行": "歐水/西行", "欧水/西行": "歐水/西行", "腓尼基/加勒比": "腓尼基/加勒比", "国营，英免": "國營/英免",
+    "西行3欧水7": "混合調貨(西行+歐水)", "西行，腓尼基": "西行/腓尼基", "瑞士1欧水38": "混合調貨(瑞士+歐水)",
+    "机制雪茄": "機制雪茄", "16年": "2016年份", "20年": "2020年份", "21年": "2021年份",
+    "22年": "2022年份", "23年": "2023年份", "西行/22年": "西行/2022年份", "西行/24年": "西行/2024年份", "英飞烽": "英飛烽"
+}
+
+def clean_channel_name(val):
+    s = str(val).strip() if val is not None else ""
+    # 嚴格過濾：如果不在提供的字典裡，一律視為「未標註」
+    return CHANNEL_CLEAN_MAP.get(s, "未標註")
+def extract_quantity(name):
+    """從品名規格中精準提取單盒支數"""
+    s = str(name).strip()
+
+    # 1. 乘法規格：如 10'S X 10, 5x5, 6*10, 5*4支
+    m_mult = re.search(r'(\d+)\s*[\'’]?[sS]?\s*[xX*×]\s*(\d+)', s)
+    if m_mult:
+        return int(m_mult.group(1)) * int(m_mult.group(2))
+
+    # 2. 中文支數：如 25支、10 支、25裝
+    m_chi = re.search(r'(\d+)\s*(支|裝|装|/盒|盒)', s, re.IGNORECASE)
+    if m_chi:
+        return int(m_chi.group(1))
+
+    # 3. 英文 S 規格：如 25S, 10S, 50s, 25'S
+    m_s = re.search(r'(\d+)\s*[\'’]?[sS]\b', s)
+    if m_s:
+        val = int(m_s.group(1))
+        if val in [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 15, 16, 18, 20, 24, 25, 30, 40, 50, 60, 66, 88, 100]:
+            return val
+
+    # 4. 優先匹配標準括號形式 (含 OCR 錯字容錯)：如 (25)、(25支)、( 15 )、(12枚)、(20页)
+    match = re.search(r'[（\(]\s*(\d{1,2})\s*(?:支|枚|页|分)?\s*[）\)]', s)
+    if match:
+        return int(match.group(1))
+
+    # 5. 處理左括號被 OCR 辨識成數字 1 的情況：如 "115 )"、"110 )"
+    match = re.search(r'(?:^|[^\d])1(\d{2})\s*[）\)]', s)
+    if match:
+        return int(match.group(1))
+
+    # 6. 處理未閉合括號：如 "(50 英国免"、"(16 水古"
+    match = re.search(r'[（\(]\s*(\d{1,2})\s*(?:[^\d\n]|$)', s)
+    if match:
+        # 排除年份如 "(24年"
+        if not re.search(r'[（\(]\s*\d{1,2}\s*年', s):
+            return int(match.group(1))
+
+    # 5. 特殊術語慣例
+    if '單支' in s or '单支' in s: return 1
+    if '宽短' in s or '寬短' in s: return 60
+    if '短号' in s or '短號' in s: return 100
+
+    return None
 PRICE_CLEAN_RE = re.compile(r'[,$\s]|HKD|RMB|USD|EUR|¥|￥', flags=re.IGNORECASE)
 
 def is_price(val):
@@ -282,25 +366,75 @@ def _split_chunk(chunk, out_rows):
     elif len(chunk) >= 2:
         out_rows.append(chunk)
 
+def try_structured_parse(df):
+    """嘗試根據標題列來進行結構化解析，以精確抓取「數量」與「價格」"""
+    header_row_idx = -1
+    for i in range(min(15, len(df))):
+        row_str = "".join([str(x).lower() for x in df.iloc[i] if pd.notna(x)])
+        if ("名" in row_str or "品" in row_str) and ("价" in row_str or "價" in row_str or "港" in row_str):
+            header_row_idx = i
+            break
+
+    if header_row_idx == -1: return None
+
+    headers = [str(x).lower().replace('\n', '').strip() if pd.notna(x) else "" for x in df.iloc[header_row_idx]]
+    
+    name_indices = []
+    price_idx, stock_idx = -1, -1
+    
+    for j, h in enumerate(headers):
+        if any(kw in h for kw in ["名", "品名", "规格", "英文", "中文"]): name_indices.append(j)
+        if any(kw in h for kw in ["价", "價", "港币", "hkd", "rmb"]): price_idx = j
+        if any(kw in h for kw in ["量", "庫存", "现货", "數量", "qty"]): stock_idx = j
+            
+    if not name_indices or price_idx == -1: return None
+        
+    structured_records = []
+    for i in range(header_row_idx + 1, len(df)):
+        row = df.iloc[i]
+        name_parts = [unicodedata.normalize('NFKC', str(row[j]).strip()) for j in name_indices if pd.notna(row[j]) and str(row[j]).strip()]
+        name = " ".join(name_parts)
+        price_val = row[price_idx]
+        
+        if pd.notna(price_val) and is_price(price_val) and name:
+            stock_qty = None
+            if stock_idx != -1 and pd.notna(row[stock_idx]):
+                sv_str = str(row[stock_idx]).replace('支', '').strip()
+                if sv_str.isdigit(): stock_qty = int(sv_str)
+
+            structured_records.append({
+                "name": name,
+                "price": extract_price(price_val),
+                "stock_qty": stock_qty,
+                "raw_row": [unicodedata.normalize('NFKC', str(x).strip()) for x in row if pd.notna(x) and str(x).strip()]
+            })
+            
+    return structured_records if structured_records else None
+
 @st.cache_data(show_spinner=False)
-def parse_file(file_bytes, file_ext):
+def parse_file_v5(file_bytes, file_ext):
     """解析單一檔案，回傳不含供應商的記錄清單（依檔案內容快取，重複上傳不需重算）"""
+    structured_data = []
     raw_rows = []
+    
     if file_ext in ['xlsx', 'xls']:
-        # 讀取所有工作表，避免漏掉第二頁以後的報價
         sheets = pd.read_excel(io.BytesIO(file_bytes), header=None, sheet_name=None)
         for df_raw in sheets.values():
-            for _, row in df_raw.iterrows():
-                current_chunk = []
-                for x in row:
-                    val = str(x).strip()
-                    if pd.notna(x) and val != "" and val.lower() != 'nan':
-                        current_chunk.append(val)
-                    elif current_chunk:
+            s_records = try_structured_parse(df_raw)
+            if s_records:
+                structured_data.extend(s_records)
+            else:
+                for _, row in df_raw.iterrows():
+                    current_chunk = []
+                    for x in row:
+                        val = str(x).strip()
+                        if pd.notna(x) and val != "" and val.lower() != 'nan':
+                            current_chunk.append(unicodedata.normalize('NFKC', val))
+                        elif current_chunk:
+                            _split_chunk(current_chunk, raw_rows)
+                            current_chunk = []
+                    if current_chunk:
                         _split_chunk(current_chunk, raw_rows)
-                        current_chunk = []
-                if current_chunk:
-                    _split_chunk(current_chunk, raw_rows)
     elif file_ext == 'pdf':
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             for page in pdf.pages:
@@ -309,20 +443,20 @@ def parse_file(file_bytes, file_ext):
                     for table in tables:
                         for row in table:
                             if row:
-                                cells = [str(x).strip() for x in row if x and str(x).strip()]
+                                cells = [unicodedata.normalize('NFKC', str(x).strip()) for x in row if x and str(x).strip()]
                                 if cells:
                                     _split_chunk(cells, raw_rows)
                 else:
                     text = page.extract_text()
                     if text:
                         for line in text.split('\n'):
-                            cols = [x.strip() for x in re.split(r'\s{2,}|\t', line) if x.strip()]
+                            cols = [unicodedata.normalize('NFKC', x.strip()) for x in re.split(r'\s{2,}|\t', line) if x.strip()]
                             if len(cols) == 1:
                                 raw_rows.append(cols)
                             elif cols:
                                 _split_chunk(cols, raw_rows)
 
-    records = []
+    # 將非結構化抓取的 raw_rows 轉換為類似 structured_data 的格式
     for vals in raw_rows:
         vals = list(vals)
         if len(vals) == 1:
@@ -330,7 +464,7 @@ def parse_file(file_bytes, file_ext):
         if len(vals) < 2:
             continue
 
-        price, name, origin = None, None, ""
+        price, name = None, None
         for v in reversed(vals):
             if is_price(v):
                 price = extract_price(v)
@@ -344,12 +478,39 @@ def parse_file(file_bytes, file_ext):
                 vals.remove(name)
 
         if name and price:
-            brand = classify_brand(name + " " + " ".join(vals))
-            origin_candidates = [v for v in vals if len(v) < 15 and not v.isdigit()
-                                 and not any(b in v for b in TARGET_BRANDS)]
-            if origin_candidates:
-                origin = " ".join(origin_candidates)
-            records.append({"品牌分類": brand, "品名規格": name, "價格": price, "產地": origin})
+            structured_data.append({
+                "name": name,
+                "price": price,
+                "stock_qty": None,
+                "raw_row": vals # 剩下的元素用來找渠道
+            })
+
+    records = []
+    for r in structured_data:
+        name = r['name']
+        price = r['price']
+        vals = r['raw_row']
+        
+        qty = extract_quantity(name + " " + " ".join(vals))
+        brand = classify_brand(name + " " + " ".join(vals))
+        
+        origin_candidates = [v for v in vals if len(v) < 15 and not v.isdigit()
+                             and not any(b in v for b in TARGET_BRANDS)]
+        original_origin = " ".join(origin_candidates) if origin_candidates else ""
+        
+        final_channel = clean_channel_name(original_origin)
+        
+        if final_channel != "未標註" and original_origin in name:
+            name = name.replace(original_origin, '').strip()
+            
+        records.append({
+            "品牌分類": brand, 
+            "品名規格": name, 
+            "規格支數": qty,
+            "庫存盒數": r.get('stock_qty'),
+            "價格": price, 
+            "渠道/產地": final_channel
+        })
     return records
 
 def build_best_price(df):
@@ -406,23 +567,27 @@ def generate_excel(df_list, df_best, pivot):
 
     # --- 工作表 1：全品項清單（正式表格，可直接插入交叉分析篩選器） ---
     ws_list = wb.create_sheet(title='全品項清單')
-    ws_list.append(['供應商', '品牌分類', '品名規格', '價格(HKD)', '產地/版本'])
+    ws_list.append(['供應商', '品牌分類', '品名規格', '規格支數', '庫存現貨', '整盒批發價', '渠道/產地'])
     for _, row in df_list.iterrows():
-        ws_list.append([row['供應商'], row['品牌分類'], row['品名規格'], int(row['價格']), row.get('產地', '')])
-    for c in range(1, 6):
+        qty = row.get('規格支數')
+        qty = int(qty) if pd.notna(qty) else ''
+        stock = row.get('庫存盒數')
+        stock = int(stock) if pd.notna(stock) else ''
+        ws_list.append([row['供應商'], row['品牌分類'], row['品名規格'], qty, stock, int(row['價格']), row.get('渠道/產地', '')])
+    for c in range(1, 8):
         ws_list.cell(row=1, column=c).font = Font(name=FONT_NAME, size=11, bold=True, color='FFFFFF')
         ws_list.cell(row=1, column=c).alignment = Alignment(horizontal='center', vertical='center')
     for r in range(2, ws_list.max_row + 1):
-        for c in range(1, 6):
+        for c in range(1, 8):
             cell = ws_list.cell(row=r, column=c)
             cell.font = bold_font if c == 2 else body_font
-            if c in [1, 2, 5]:
+            if c in [1, 2, 4, 5, 7]:
                 cell.alignment = Alignment(horizontal='center', vertical='center')
-            elif c == 4:
+            elif c == 6:
                 cell.alignment = Alignment(horizontal='right', vertical='center')
                 cell.number_format = '#,##0'
     if ws_list.max_row > 1:
-        tab = Table(displayName="DataList", ref=f"A1:E{ws_list.max_row}")
+        tab = Table(displayName="DataList", ref=f"A1:G{ws_list.max_row}")
         tab.tableStyleInfo = TableStyleInfo(name="TableStyleMedium9", showRowStripes=True)
         ws_list.add_table(tab)
     ws_list.freeze_panes = 'A2'
@@ -501,7 +666,7 @@ def generate_excel(df_list, df_best, pivot):
 # ==========================================
 # 5. 篩選器狀態管理
 # ==========================================
-FILTER_KEYS = ['f_brands', 'f_vendors', 'f_price', 'f_kw', 'f_origin']
+FILTER_KEYS = ['f_brands', 'f_vendors', 'f_price', 'f_kw', 'f_origin', 'f_stick', 'f_stock']
 
 def reset_filters(price_bounds=None):
     """清除所有篩選條件（真正重置元件狀態）"""
@@ -509,12 +674,15 @@ def reset_filters(price_bounds=None):
     st.session_state['f_vendors'] = []
     st.session_state['f_kw'] = ""
     st.session_state['f_origin'] = []
+    st.session_state['f_stick'] = '全部規格'
+    st.session_state['f_stock'] = '全部（含詢價）'
     if price_bounds:
         st.session_state['f_price'] = price_bounds
 
 def clear_results():
     for k in ['df_result', 'file_stats'] + FILTER_KEYS:
         st.session_state.pop(k, None)
+    st.cache_data.clear()
 
 # ==========================================
 # 6. 版面：Hero 標題
@@ -525,14 +693,26 @@ st.markdown(f"""
     <p class="subtitle">
         上傳各家 Excel / PDF 報價單 → 自動辨識 30 個品牌與供應商 → 跨店比價 · 最低價排行 · 一鍵匯出 Excel
     </p>
-    <span class="badge">⚡ {APP_VERSION} — 多工作表匯出 · 最低價排行 · 供應商名稱可手動修正</span>
+    <span class="badge">⚡ {APP_VERSION} — 支援品牌維護 · 擷取支數 · 渠道標註</span>
 </div>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 7. 側邊欄：步驟 1 上傳
+# 7. 側邊欄：步驟 1 上傳與設定
 # ==========================================
 st.sidebar.markdown('<div class="sidebar-title">🍂 雪茄報價系統</div>', unsafe_allow_html=True)
+
+# --- 品牌設定區 ---
+with st.sidebar.expander("⚙️ 品牌關鍵字維護", expanded=False):
+    st.caption("修改下方表格後點擊「儲存」即可立即套用。您也可以下載 CSV 修改後上傳至 GitHub 以永久保存。")
+    edited_brands = st.data_editor(df_brand_rules, num_rows="dynamic", use_container_width=True, hide_index=True)
+    if st.button("💾 儲存並套用新規則", use_container_width=True):
+        edited_brands.to_csv(RULES_FILE, index=False, encoding='utf-8-sig')
+        st.cache_data.clear()
+        st.rerun()
+    with open(RULES_FILE, "rb") as f:
+        st.download_button("📥 下載規則檔", f, file_name=RULES_FILE, mime="text/csv", use_container_width=True)
+
 st.sidebar.markdown('<div class="step-label">STEP 1 · 上傳報價單</div>', unsafe_allow_html=True)
 uploaded_files = st.sidebar.file_uploader(
     "上傳報價單",
@@ -622,7 +802,7 @@ if parse_button and uploaded_files:
         vendor = (vendor_map.get(file.name) or get_standard_vendor(file.name)).strip()
         file_ext = file.name.rsplit('.', 1)[-1].lower()
         try:
-            records = parse_file(file.getvalue(), file_ext)
+            records = parse_file_v5(file.getvalue(), file_ext)
             for r in records:
                 all_records.append({"供應商": vendor, **r})
             status = "✅ 成功" if records else "⚠️ 無資料"
@@ -641,6 +821,7 @@ if parse_button and uploaded_files:
 
     if all_records:
         df_result = pd.DataFrame(all_records)
+        df_result['庫存盒數'] = pd.to_numeric(df_result['庫存盒數'], errors='coerce')
         brand_order_map = {b: i for i, b in enumerate(TARGET_BRANDS)}
         brand_order_map['其他品牌'] = 999
         df_result['排序權重'] = df_result['品牌分類'].map(brand_order_map)
@@ -675,9 +856,26 @@ if 'df_result' in st.session_state:
     brand_order = [b for b in TARGET_BRANDS + ['其他品牌'] if b in set(df_result['品牌分類'])]
     st.sidebar.multiselect("📌 品牌分類", brand_order, key='f_brands', placeholder="全部品牌")
     st.sidebar.multiselect("🏬 供應商", sorted(df_result['供應商'].unique()), key='f_vendors', placeholder="全部供應商")
-    origins = sorted([o for o in df_result['產地'].unique() if o])
+    
+    # 依照您提供的對照字典順序來排列渠道選項
+    standard_channels = list(dict.fromkeys(CHANNEL_CLEAN_MAP.values()))
+    available_channels = [c for c in standard_channels if c in set(df_result['渠道/產地'])]
+    other_channels = sorted([c for c in df_result['渠道/產地'].unique() if c and c not in available_channels])
+    origins = available_channels + other_channels
+    
     if origins:
-        st.sidebar.multiselect("🌍 產地 / 版本", origins, key='f_origin', placeholder="全部產地")
+        st.sidebar.multiselect("🌍 渠道/產地", origins, key='f_origin', placeholder="全部渠道/產地")
+        
+    stick_options = [
+        '全部規格', '25支常規盒', '10支精裝', '12支(千里達)', '15支鋁管/盒', 
+        '20支裝', '50支滑蓋櫃', '機制條裝(60/100支)', '其他/未明確標註'
+    ]
+    st.sidebar.selectbox('📦 包裝支數規格', stick_options, key='f_stick')
+
+    st.sidebar.radio(
+        '📦 現貨狀態', ['全部（含詢價）', '僅看在席現貨 (庫存 > 0)', '大宗現貨 (≥ 5盒)'], key='f_stock'
+    )
+
     st.sidebar.slider("💰 價格區間 (HKD)", min_value=price_min, max_value=price_max,
                       step=50, format="$%d", key='f_price')
     st.sidebar.text_input("🔎 品名搜尋", key='f_kw', placeholder="短丘、D4、BHK... (空格分隔可多關鍵字)")
@@ -690,6 +888,8 @@ if 'df_result' in st.session_state:
     selected_brands = st.session_state['f_brands']
     selected_vendors = st.session_state['f_vendors']
     selected_origins = st.session_state.get('f_origin', [])
+    selected_stick = st.session_state.get('f_stick', '全部規格')
+    selected_stock = st.session_state.get('f_stock', '全部（含詢價）')
     price_range = st.session_state['f_price']
     keyword = st.session_state['f_kw'].strip()
 
@@ -699,7 +899,20 @@ if 'df_result' in st.session_state:
     if selected_vendors:
         df_display = df_display[df_display['供應商'].isin(selected_vendors)]
     if selected_origins:
-        df_display = df_display[df_display['產地'].isin(selected_origins)]
+        df_display = df_display[df_display['渠道/產地'].isin(selected_origins)]
+        
+    if selected_stick == '25支常規盒': df_display = df_display[df_display['規格支數'] == 25]
+    elif selected_stick == '10支精裝': df_display = df_display[df_display['規格支數'] == 10]
+    elif selected_stick == '12支(千里達)': df_display = df_display[df_display['規格支數'] == 12]
+    elif selected_stick == '15支鋁管/盒': df_display = df_display[df_display['規格支數'] == 15]
+    elif selected_stick == '20支裝': df_display = df_display[df_display['規格支數'] == 20]
+    elif selected_stick == '50支滑蓋櫃': df_display = df_display[df_display['規格支數'] == 50]
+    elif selected_stick == '機制條裝(60/100支)': df_display = df_display[df_display['規格支數'].isin([60, 100])]
+    elif selected_stick == '其他/未明確標註': df_display = df_display[df_display['規格支數'].isna()]
+
+    if selected_stock == '僅看在席現貨 (庫存 > 0)': df_display = df_display[df_display['庫存盒數'] > 0]
+    elif selected_stock == '大宗現貨 (≥ 5盒)': df_display = df_display[df_display['庫存盒數'] >= 5]
+        
     df_display = df_display[(df_display['價格'] >= price_range[0]) & (df_display['價格'] <= price_range[1])]
     if keyword:
         # 多關鍵字：以空格分隔，需同時符合（AND）
@@ -711,7 +924,7 @@ if 'df_result' in st.session_state:
     chips = []
     if selected_brands: chips.append(f"品牌：{'、'.join(selected_brands)}")
     if selected_vendors: chips.append(f"供應商：{'、'.join(selected_vendors)}")
-    if selected_origins: chips.append(f"產地：{'、'.join(selected_origins)}")
+    if selected_origins: chips.append(f"渠道：{'、'.join(selected_origins)}")
     if tuple(price_range) != price_bounds: chips.append(f"價格：${price_range[0]:,} ~ ${price_range[1]:,}")
     if keyword: chips.append(f"搜尋：{keyword}")
     chips_html = "".join(f'<span class="chip">{c}</span>' for c in chips)
@@ -793,10 +1006,10 @@ if 'df_result' in st.session_state:
     """, unsafe_allow_html=True)
 
     other_count = int((df_display['品牌分類'] == '其他品牌').sum())
-    tab_matrix, tab_best, tab_list, tab_chart, tab_other = st.tabs([
+    tab_list, tab_matrix, tab_best, tab_chart, tab_other = st.tabs([
+        f"📋 全品項清單 ({len(df_display)})",
         "📊 跨店比價矩陣",
         f"🏆 最低價排行 ({len(df_best)})",
-        f"📋 全品項清單 ({len(df_display)})",
         "📈 統計圖表",
         f"⚠️ 未分類品項 ({other_count})",
     ])
@@ -848,8 +1061,11 @@ if 'df_result' in st.session_state:
         else:
             st.dataframe(
                 df_display, use_container_width=True, height=600, hide_index=True,
+                column_order=['供應商', '品牌分類', '品名規格', '規格支數', '庫存盒數', '價格', '渠道/產地'],
                 column_config={
-                    "價格": st.column_config.NumberColumn("價格 (HKD)", format="$%d"),
+                    "價格": st.column_config.NumberColumn("整盒批發價", format="$%d"),
+                    "規格支數": st.column_config.NumberColumn("規格支數", format="%d 支"),
+                    "庫存盒數": st.column_config.NumberColumn("庫存現貨", format="%d 盒"),
                     "品名規格": st.column_config.TextColumn(width="large"),
                 },
             )
