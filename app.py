@@ -31,7 +31,7 @@ st.markdown("""
     /* ===== Hero 橫幅 ===== */
     .hero {
         background: linear-gradient(135deg, #0F2027 0%, #203A43 40%, #2C5364 100%);
-        padding: 1.6rem 2.2rem;
+        padding: 1.8rem 2.5rem;
         border-radius: 16px;
         margin-bottom: 1.4rem;
         position: relative;
@@ -45,32 +45,32 @@ st.markdown("""
         background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
         border-radius: 50%;
     }
-    .hero h1 { color: #FFFFFF; font-size: 1.85rem; font-weight: 700; margin: 0 0 0.3rem 0; }
-    .hero .subtitle { color: rgba(255,255,255,0.75); font-size: 0.92rem; margin: 0; line-height: 1.6; }
+    .hero h1 { color: #FFFFFF; font-size: 2.2rem; font-weight: 700; margin: 0 0 0.4rem 0; }
+    .hero .subtitle { color: rgba(255,255,255,0.85); font-size: 1.1rem; margin: 0; line-height: 1.6; }
     .hero .badge {
         display: inline-block;
         background: rgba(255,255,255,0.15);
         border: 1px solid rgba(255,255,255,0.25);
         color: #FFFFFF;
-        padding: 0.15rem 0.7rem;
+        padding: 0.2rem 0.8rem;
         border-radius: 20px;
-        font-size: 0.75rem;
-        margin-top: 0.7rem;
+        font-size: 0.9rem;
+        margin-top: 0.8rem;
     }
 
     /* ===== KPI 卡片 ===== */
     [data-testid="stMetric"] {
         background: #FFFFFF;
         border: 1px solid #E3E8F0;
-        border-left: 4px solid #2C5364;
+        border-left: 5px solid #2C5364;
         border-radius: 12px;
-        padding: 0.9rem 1rem;
+        padding: 1rem 1.2rem;
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         transition: transform 0.2s, box-shadow 0.2s;
     }
     [data-testid="stMetric"]:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-    [data-testid="stMetricLabel"] { color: #6B7280 !important; font-weight: 500 !important; }
-    [data-testid="stMetricValue"] { font-size: 1.35rem !important; font-weight: 700 !important; color: #1F2937 !important; }
+    [data-testid="stMetricLabel"] { color: #6B7280 !important; font-size: 1rem !important; font-weight: 600 !important; }
+    [data-testid="stMetricValue"] { font-size: 1.7rem !important; font-weight: 700 !important; color: #1F2937 !important; }
 
     /* ===== 側邊欄 ===== */
     section[data-testid="stSidebar"] > div:first-child {
@@ -79,19 +79,19 @@ st.markdown("""
     .sidebar-title {
         background: linear-gradient(135deg, #0F2027, #2C5364);
         color: white;
-        padding: 0.6rem 1rem;
+        padding: 0.8rem 1rem;
         border-radius: 10px;
-        font-size: 0.95rem;
+        font-size: 1.15rem;
         font-weight: 600;
-        margin-bottom: 0.6rem;
+        margin-bottom: 0.8rem;
         text-align: center;
     }
     .step-label {
-        font-size: 0.78rem;
+        font-size: 0.95rem;
         font-weight: 700;
         color: #2C5364;
         letter-spacing: 1px;
-        margin: 0.6rem 0 0.2rem 0;
+        margin: 0.8rem 0 0.3rem 0;
     }
 
     /* ===== 下載按鈕 ===== */
@@ -101,6 +101,8 @@ st.markdown("""
         border: none !important;
         border-radius: 10px !important;
         font-weight: 600 !important;
+        font-size: 1.05rem !important;
+        padding: 0.5rem 1rem !important;
         box-shadow: 0 2px 8px rgba(31,78,120,0.25) !important;
         transition: all 0.25s !important;
     }
@@ -109,60 +111,64 @@ st.markdown("""
     /* ===== 分區標題 ===== */
     .section-header {
         display: flex; align-items: center; gap: 0.6rem;
-        padding: 0.6rem 0; margin: 0.8rem 0 0.6rem 0;
+        padding: 0.6rem 0; margin: 1rem 0 0.6rem 0;
         border-bottom: 2px solid #E5E7EB;
     }
-    .section-header .icon { font-size: 1.35rem; }
-    .section-header .text { font-size: 1.1rem; font-weight: 700; color: #1F2937; }
-    .section-header .desc { font-size: 0.8rem; color: #6B7280; margin-left: auto; }
+    .section-header .icon { font-size: 1.6rem; }
+    .section-header .text { font-size: 1.3rem; font-weight: 700; color: #1F2937; }
+    .section-header .desc { font-size: 1rem; color: #6B7280; margin-left: auto; }
 
     /* ===== 功能卡片 (空狀態) ===== */
-    .empty-state { text-align: center; padding: 2.5rem 2rem 1.5rem 2rem; color: #9CA3AF; }
-    .empty-state .icon { font-size: 3.5rem; margin-bottom: 0.6rem; }
-    .empty-state .title { font-size: 1.2rem; font-weight: 600; color: #4B5563; }
-    .empty-state .desc { font-size: 0.9rem; margin-top: 0.4rem; }
+    .empty-state { text-align: center; padding: 3rem 2rem 2rem 2rem; color: #9CA3AF; }
+    .empty-state .icon { font-size: 4rem; margin-bottom: 0.8rem; }
+    .empty-state .title { font-size: 1.5rem; font-weight: 600; color: #4B5563; }
+    .empty-state .desc { font-size: 1.1rem; margin-top: 0.5rem; }
     .feature-card {
         background: #FFFFFF;
         border: 1px solid #E5E7EB;
         border-radius: 14px;
-        padding: 1.3rem 1.2rem;
+        padding: 1.5rem 1.2rem;
         height: 100%;
         box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     }
-    .feature-card .f-icon { font-size: 1.8rem; }
-    .feature-card .f-title { font-size: 1rem; font-weight: 700; color: #1F2937; margin: 0.4rem 0; }
-    .feature-card .f-desc { font-size: 0.86rem; color: #6B7280; line-height: 1.6; }
+    .feature-card .f-icon { font-size: 2.2rem; }
+    .feature-card .f-title { font-size: 1.15rem; font-weight: 700; color: #1F2937; margin: 0.5rem 0; }
+    .feature-card .f-desc { font-size: 1rem; color: #6B7280; line-height: 1.6; }
 
     /* ===== 狀態列 ===== */
     .status-bar {
         background: linear-gradient(90deg, #ECFDF5, #F0FDF4);
         border: 1px solid #A7F3D0;
         border-radius: 10px;
-        padding: 0.6rem 1.1rem;
-        display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
-        margin: 0.4rem 0 0.6rem 0;
+        padding: 0.8rem 1.2rem;
+        display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;
+        margin: 0.6rem 0 0.8rem 0;
     }
-    .status-bar .dot { width: 8px; height: 8px; background: #10B981; border-radius: 50%; animation: pulse 2s infinite; }
+    .status-bar .dot { width: 10px; height: 10px; background: #10B981; border-radius: 50%; animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-    .status-bar .text { font-size: 0.88rem; color: #065F46; font-weight: 500; }
+    .status-bar .text { font-size: 1.05rem; color: #065F46; font-weight: 600; }
     .chip {
         display: inline-block;
         background: #FFFFFF;
         border: 1px solid #A7F3D0;
         color: #065F46;
-        border-radius: 14px;
-        padding: 0.05rem 0.6rem;
-        font-size: 0.78rem;
+        border-radius: 16px;
+        padding: 0.15rem 0.8rem;
+        font-size: 0.95rem;
+        font-weight: 500;
     }
 
     /* ===== Tabs ===== */
     .stTabs [data-baseweb="tab-list"] { gap: 0; background: #F3F4F6; border-radius: 12px; padding: 4px; }
-    .stTabs [data-baseweb="tab"] { border-radius: 8px; padding: 0.45rem 1.2rem; font-weight: 600; }
+    .stTabs [data-baseweb="tab"] { border-radius: 8px; padding: 0.6rem 1.2rem; font-weight: 600; font-size: 1.05rem; }
     .stTabs [aria-selected="true"] { background: white !important; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 
+    /* ===== 放大 Dataframe 內容 ===== */
+    [data-testid="stDataFrame"] { font-size: 1.05rem; }
+    
     /* ===== 頁腳 ===== */
     .footer {
-        text-align: center; padding: 1.2rem 0; color: #9CA3AF; font-size: 0.8rem;
+        text-align: center; padding: 1.5rem 0; color: #9CA3AF; font-size: 0.95rem;
         border-top: 1px solid #F3F4F6; margin-top: 2rem;
     }
 </style>
