@@ -298,16 +298,19 @@ def clean_channel_name(val):
     s = str(val).strip() if val is not None else ""
     if not s: return "未標註"
     
+    s_lower = s.lower()
+    
     # 從備註中萃取已知的渠道/產地，避免將無關備註(如"盒損")塞入
     found = []
     
-    # 先做精確比對
-    if s in CHANNEL_CLEAN_MAP:
-        return CHANNEL_CLEAN_MAP[s]
-        
-    # 再做模糊萃取
+    # 先做精確比對 (忽略大小寫)
     for k, v in CHANNEL_CLEAN_MAP.items():
-        if k in s and v not in found:
+        if s_lower == str(k).lower():
+            return v
+        
+    # 再做模糊萃取 (忽略大小寫)
+    for k, v in CHANNEL_CLEAN_MAP.items():
+        if str(k).lower() in s_lower and v not in found:
             found.append(v)
             
     if found:
@@ -413,27 +416,52 @@ def try_structured_parse(df):
     for i in range(header_row_idx - 1, -1, -1):
         row = df.iloc[i]
         valid_cells = [unicodedata.normalize('NFKC', str(x).strip()) for x in row if pd.notna(x) and str(x).strip()]
+        
+        is_category = False
+        cat_val = ""
+        
         if len(valid_cells) == 1:
-            val = valid_cells[0]
-            if len(val) > 1 and not is_price(val) and not val.isdigit() and "序号" not in val and "品名" not in val:
-                current_category = val
+            cat_val = valid_cells[0]
+            is_category = True
+        elif len(valid_cells) == 2:
+            if valid_cells[0].isdigit():
+                cat_val = valid_cells[1]
+                is_category = True
+            elif valid_cells[1].isdigit():
+                cat_val = valid_cells[0]
+                is_category = True
+
+        if is_category:
+            if len(cat_val) > 1 and not is_price(cat_val) and not cat_val.isdigit() and "序号" not in cat_val and "品名" not in cat_val:
+                current_category = cat_val
                 break
     for i in range(header_row_idx + 1, len(df)):
         row = df.iloc[i]
         
-        # 捕捉合併儲存格的大標題 (例如 "大卫杜夫 (Davidoff)")
+        # 捕捉大標題 (例如 "大卫杜夫" 或帶有序號的 "16", "千里达系列")
         valid_cells = [unicodedata.normalize('NFKC', str(x).strip()) for x in row if pd.notna(x) and str(x).strip()]
+        
+        is_category = False
+        cat_val = ""
+        
         if len(valid_cells) == 1:
-            val = valid_cells[0]
-            if len(val) > 1 and not is_price(val) and not val.isdigit() and "序号" not in val and "品名" not in val:
-                current_category = val
+            cat_val = valid_cells[0]
+            is_category = True
+        elif len(valid_cells) == 2:
+            if valid_cells[0].isdigit():
+                cat_val = valid_cells[1]
+                is_category = True
+            elif valid_cells[1].isdigit():
+                cat_val = valid_cells[0]
+                is_category = True
+
+        if is_category:
+            if len(cat_val) > 1 and not is_price(cat_val) and not cat_val.isdigit() and "序号" not in cat_val and "品名" not in cat_val:
+                current_category = cat_val
                 continue
                 
         name_parts = [unicodedata.normalize('NFKC', str(row[j]).strip()) for j in name_indices if pd.notna(row[j]) and str(row[j]).strip()]
         name = " ".join(name_parts)
-        if current_category and name:
-            name = f"[{current_category}] {name}"
-            
         price_val = row[price_idx]
         
         if pd.notna(price_val) and is_price(price_val) and name:
@@ -451,13 +479,13 @@ def try_structured_parse(df):
                 "price": extract_price(price_val),
                 "stock_qty": stock_qty,
                 "remark": remark_val,
-                "raw_row": [unicodedata.normalize('NFKC', str(x).strip()) for x in row if pd.notna(x) and str(x).strip()]
+                "raw_row": ([current_category] if current_category else []) + [unicodedata.normalize('NFKC', str(x).strip()) for x in row if pd.notna(x) and str(x).strip()]
             })
             
     return structured_records if structured_records else None
 
 @st.cache_data(show_spinner=False)
-def parse_file_v15(file_bytes, file_ext):
+def parse_file_v27(file_bytes, file_ext):
     """解析單一檔案，回傳不含供應商的記錄清單（依檔案內容快取，重複上傳不需重算）"""
     structured_data = []
     raw_rows = []
@@ -519,8 +547,8 @@ def parse_file_v15(file_bytes, file_ext):
         if price:
             candidates = [v for v in vals if not v.isdigit()]
             if candidates:
-                name = max(candidates, key=len)
-                vals.remove(name)
+                name = " ".join(candidates)
+                for c in candidates: vals.remove(c)
 
         if name and price:
             structured_data.append({
@@ -547,10 +575,23 @@ def parse_file_v15(file_bytes, file_ext):
                                  and not any(b in v for b in TARGET_BRANDS)]
             original_origin = " ".join(origin_candidates) if origin_candidates else ""
         
-        final_channel = clean_channel_name(original_origin)
+        # 很多時候 (特別是 PDF) 產地會直接寫在品名裡，所以合併品名一起萃取
+        combined_text = f"{original_origin} {name}"
+        final_channel = clean_channel_name(combined_text)
         
-        if final_channel != "未標註" and original_origin in name:
-            name = name.replace(original_origin, '').strip()
+        if final_channel != "未標註":
+            # 把被萃取為產地的關鍵字從品名中拔除，保持品名乾淨
+            for k, v in CHANNEL_CLEAN_MAP.items():
+                if str(k).lower() in name.lower() and v in final_channel:
+                    name = re.sub(re.escape(str(k)), '', name, flags=re.IGNORECASE).strip()
+            
+            # 若原始 origin 字串剛好也完整在品名中，也一併移除
+            if original_origin and original_origin.lower() in name.lower():
+                name = re.sub(re.escape(original_origin), '', name, flags=re.IGNORECASE).strip()
+        
+        # 移除多餘的空白、括號、連接詞與逗號
+        name = re.sub(r'[\(\[\{]\s*[\)\]\}]', '', name).strip(' -_/,，。')
+        name = re.sub(r'\s{2,}', ' ', name).strip(' -_/,，。')
             
         records.append({
             "品牌分類": brand, 
@@ -880,7 +921,7 @@ if parse_button and uploaded_files:
         vendor = (vendor_map.get(file.name) or get_standard_vendor(file.name)).strip()
         file_ext = file.name.rsplit('.', 1)[-1].lower()
         try:
-            records = parse_file_v15(file.getvalue(), file_ext)
+            records = parse_file_v27(file.getvalue(), file_ext)
             for r in records:
                 all_records.append({"供應商": vendor, **r})
             status = "✅ 成功" if records else "⚠️ 無資料"
