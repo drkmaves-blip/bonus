@@ -180,39 +180,53 @@ st.markdown("""
 # 2. 品牌與供應商設定 (動態載入 brand_rules.csv)
 # ==========================================
 RULES_FILE = 'brand_rules.csv'
+VENDOR_RULES_FILE = 'vendor_rules.csv'
 
 DEFAULT_BRAND_RULES = [
-    # 順序很重要：例如 "好友" 必須在 "蒙特" 前面，避免 "好友蒙特利" 誤判為蒙特
+    # 順序很重要：例如 '好友' 必須在 '蒙特' 前面，避免 '好友蒙特利' 誤判為蒙特
     {"品牌分類": "富恩特", "關鍵字": "富恩特, fuente, 海明威"},
     {"品牌分類": "我的父親", "關鍵字": "我的父亲, 我的父親, my father"},
     {"品牌分類": "多明尼加之花", "關鍵字": "多米尼加之花, 多明尼加之花, flor dominicana"},
     {"品牌分類": "獅子王", "關鍵字": "狮子王, 獅子王, 拉奥罗拉, aurora"},
     {"品牌分類": "好友", "關鍵字": "好友, hoyo, epicure, 逍遥, 赛科, 聖胡安, 帕尔马斯"},
-    {"品牌分類": "潑辣", "關鍵字": "泼辣, 潑辣, 波尔, larranaga"},
-    {"品牌分類": "高希霸", "關鍵字": "高希霸, cohiba, bhk, 世纪, 半世纪, 魔术师, 导师"},
-    {"品牌分類": "千里達", "關鍵字": "千里达, 千里達, 特立尼达, trinidad, 3t, 雷耶斯, 暗礁"},
+    {"品牌分類": "潑辣", "關鍵字": "泼辣, 潑辣, 波尔, larranaga, 波辣"},
+    {"品牌分類": "高希霸", "關鍵字": "高希霸, cohiba, bhk, 世纪, 半世纪, 魔术师, 导师, 高世紀, 高半世紀"},
+    {"品牌分類": "千里達", "關鍵字": "千里达, 千里達, 特立尼达, trinidad, 3t, 雷耶斯, 暗礁, 千裏達, 千裏達"},
     {"品牌分類": "蒙特", "關鍵字": "蒙特, montecristo, 艾蒙多, 1935, 大仲马, 蒙特2号, 蒙特4号"},
-    {"品牌分類": "帕特加斯", "關鍵字": "帕特加斯, partagas, 路西塔尼亚, d4, p2, e2"},
-    {"品牌分類": "羅密歐與茱麗葉", "關鍵字": "罗密欧, 羅密歐, romeo, 短丘, 宽丘, 丘比特"},
-    {"品牌分類": "烏普曼", "關鍵字": "乌普曼, 烏普曼, upmann, 玛瑙, 鉴赏家, 半皇冠"},
-    {"品牌分類": "玻利瓦", "關鍵字": "玻利瓦, bolivar"},
-    {"品牌分類": "雷蒙阿隆尼", "關鍵字": "雷蒙, allones"},
-    {"品牌分類": "多爾賽碼頭", "關鍵字": "多尔塞, quai, d'orsay, 码头"},
-    {"品牌分類": "潘趣", "關鍵字": "潘趣, punch"},
-    {"品牌分類": "庫阿巴", "關鍵字": "库阿巴, cuaba"},
+    {"品牌分類": "帕特", "關鍵字": "帕特加斯, partagas, 路西塔尼亚, d4, p2, e2, 帕3特加斯, 帕特佳斯, 帕特"},
+    {"品牌分類": "羅密歐與茱麗葉", "關鍵字": "罗密欧, 羅密歐, romeo, 短丘, 宽丘, 丘比特,罗米欧"},
+    {"品牌分類": "烏普曼", "關鍵字": "乌普曼, 烏普曼, upmann, 玛瑙, 鉴赏家, 半皇冠, 优民, 優民, 优民, 優民, 优明"},
+    {"品牌分類": "玻利瓦", "關鍵字": "玻利瓦, bolivar, 玻璃瓦尔"},
+    {"品牌分類": "雷蒙阿隆尼", "關鍵字": "雷蒙, allones, 雷蒙亚隆, 雷蒙亞隆, ramon allones"},
+    {"品牌分類": "多爾賽碼頭", "關鍵字": "多尔塞, quai, d'orsay, 码头, 多爾賽"},
+    {"品牌分類": "潘趣", "關鍵字": "潘趣, punch, punch"},
+    {"品牌分類": "庫阿巴", "關鍵字": "库阿巴, cuaba, 库亚巴, 庫亞巴, 库亚巴, 庫亞巴, 库阿巴, 库亞巴, 库亚巴"},
     {"品牌分類": "威古洛", "關鍵字": "威古洛, vegueros"},
     {"品牌分類": "胡安洛佩斯", "關鍵字": "胡安, juan lopez"},
     {"品牌分類": "外交官", "關鍵字": "外交官, diplomaticos"},
-    {"品牌分類": "比雅達", "關鍵字": "比亚达, 比雅達, piedra, 猎人"},
-    {"品牌分類": "金特羅", "關鍵字": "金特罗, quintero, 挚爱"},
+    {"品牌分類": "比亞達", "關鍵字": "比亚达, 比雅達, piedra, 猎人, 比亚达, 比雅达,比亞達"},
+    {"品牌分類": "金特羅", "關鍵字": "金特罗, quintero, 挚爱, 君特罗, 君特羅, 君特罗, 君特羅, 金特罗, 金特羅"},
     {"品牌分類": "世界之王", "關鍵字": "世界之王, rey del mundo"},
-    {"品牌分類": "卡諾之花", "關鍵字": "卡诺之花, flor de cano"},
+    {"品牌分類": "卡諾之花", "關鍵字": "卡诺之花, flor de cano, 拉弗洛尔, 德卡诺, la flor de cano, 拉佛, 拉斐洛尔"},
     {"品牌分類": "古巴榮耀", "關鍵字": "古巴荣耀, gloria cubana"},
-    {"品牌分類": "拉斐爾", "關鍵字": "拉斐尔, rafael gonzalez"},
+    {"品牌分類": "拉斐爾", "關鍵字": "拉斐尔, rafael gonzalez, 拉菲尔"},
     {"品牌分類": "豐塞卡", "關鍵字": "丰塞卡, fonseca"},
-    {"品牌分類": "羅賓納", "關鍵字": "罗宾纳, robaina"},
-    {"品牌分類": "大衛杜夫", "關鍵字": "大卫杜夫, davidoff"},
+    {"品牌分類": "羅賓納", "關鍵字": "罗宾纳, robaina, 罗宾娜, 羅賓娜"},
+    {"品牌分類": "大衛杜夫", "關鍵字": "大卫杜夫, davidoff, 大卫, 大衛"},
     {"品牌分類": "潮牌CAO", "關鍵字": "潮牌, cao"},
+    {"品牌分類": "聖克里斯托", "關鍵字": "圣克里斯托, 聖克里斯托, 圣克里, 聖克裏, san cristobal, 圣克, 聖克"},
+    {"品牌分類": "聖路易斯雷", "關鍵字": "圣路易斯, 聖路易斯, saint luis rey"},
+    {"品牌分類": "桑丘潘沙", "關鍵字": "桑丘, sancho panza"},
+    {"品牌分類": "奧利瓦", "關鍵字": "奥利瓦, 奧利瓦, oliva"},
+    {"品牌分類": "帕拉森", "關鍵字": "帕拉森, plasencia"},
+    {"品牌分類": "麥克紐杜", "關鍵字": "麦克纽杜, 麥克紐杜, macanudo"},
+    {"品牌分類": "托斯卡納", "關鍵字": "托斯卡纳, 托斯卡納, toscano"},
+    {"品牌分類": "關塔那摩", "關鍵字": "关塔那摩, guantanamera"},
+    {"品牌分類": "紫檀葉", "關鍵字": "紫檀叶, 紫檀葉, palio"},
+    {"品牌分類": "唯佳", "關鍵字": "唯佳, vegafina, vf"},
+    {"品牌分類": "奥利瓦 V 系列", "關鍵字": "V系列,G系列,ADVENT CALENDAR"},
+    {"品牌分類": "葡萄牙地限", "關鍵字": "葡萄牙地限"},
+    {"品牌分類": "羅賓娜", "關鍵字": "罗宾娜, 羅賓娜, 罗兵娜, 羅兵娜, robaina"},
 ]
 
 def load_brand_rules():
@@ -226,29 +240,19 @@ def load_brand_rules():
 df_brand_rules = load_brand_rules()
 TARGET_BRANDS = df_brand_rules['品牌分類'].tolist()
 
-VENDOR_RULES = {
-    "天空": "古巴天空",
-    "千源": "千源古巴行",
-    "古巴之家": "古巴之家",
-    "818": "818同行批發",
-    "壹茄": "壹茄批發",
-    "寰宇": "寰宇之家",
-    "维嘉": "維嘉批發",
-    "維嘉": "維嘉批發",
-    "行货": "行貨雪茄報價",
-    "行貨": "行貨雪茄報價",
-    "2026": "澳門批發庫存表",
-    "澳门批发": "澳門批發庫存表",
-    "澳門批發": "澳門批發庫存表",
-    "庫存": "庫存報價(09.29)",
-    "库存": "庫存報價(09.29)",
-}
+def load_vendor_rules():
+    if not os.path.exists(VENDOR_RULES_FILE):
+        return pd.DataFrame()
+    return pd.read_csv(VENDOR_RULES_FILE, encoding='utf-8-sig')
+
+df_vendor_rules = load_vendor_rules()
 
 def get_standard_vendor(filename):
     """根據檔名關鍵字自動標準化供應商名稱"""
-    for key, standard_name in VENDOR_RULES.items():
-        if key in filename:
-            return standard_name
+    if not df_vendor_rules.empty:
+        for _, row in df_vendor_rules.iterrows():
+            if str(row['檔名關鍵字']) in filename:
+                return str(row['標準供應商名稱'])
     name = filename.rsplit('.', 1)[0]
     name = re.sub(r'\d{1,2}\.\d{1,2}', '', name)
     name = re.sub(r'20\d{2}', '', name)
@@ -280,24 +284,36 @@ def classify_brand(pname):
 # ==========================================
 # 3. 解析引擎與支數擷取
 # ==========================================
-CHANNEL_CLEAN_MAP = {
-    "国营": "古巴國營", "古巴国营": "古巴國營", "欧水": "歐洲水貨", "西行": "西行/西班牙", "西班牙": "西行/西班牙",
-    "英国免税": "英國免稅", "英免": "英國免稅", "英国": "英國免稅", "瑞士": "瑞士", "瑞行": "瑞士",
-    "葡萄牙": "葡萄牙", "葡萄牙行": "葡萄牙", "德国": "德國", "德行": "德國", "加勒比": "加勒比",
-    "加勒比海": "加勒比", "安道尔": "安道爾", "腓尼基": "腓尼基", "墨西哥": "墨西哥", "荷兰": "荷蘭",
-    "爱尔兰": "愛爾蘭", "加拿大": "加拿大", "意大利": "意大利", "法行": "法行", "巴西": "巴西",
-    "国营，欧水": "國營/歐水", "国营/欧水": "國營/歐水", "欧水，国营": "國營/歐水", "欧水/国营": "國營/歐水",
-    "国营，西行": "國營/西行", "国营/西行": "國營/西行", "国营，腓尼基": "國營/腓尼基", "国营/腓尼基": "國營/腓尼基",
-    "欧水，西行": "歐水/西行", "欧水/西行": "歐水/西行", "腓尼基/加勒比": "腓尼基/加勒比", "国营，英免": "國營/英免",
-    "西行3欧水7": "混合調貨(西行+歐水)", "西行，腓尼基": "西行/腓尼基", "瑞士1欧水38": "混合調貨(瑞士+歐水)",
-    "机制雪茄": "機制雪茄", "16年": "2016年份", "20年": "2020年份", "21年": "2021年份",
-    "22年": "2022年份", "23年": "2023年份", "西行/22年": "西行/2022年份", "西行/24年": "西行/2024年份", "英飞烽": "英飛烽"
-}
+CHANNEL_RULES_FILE = 'channel_rules.csv'
+
+def load_channel_rules():
+    if not os.path.exists(CHANNEL_RULES_FILE):
+        return pd.DataFrame(), {}
+    df = pd.read_csv(CHANNEL_RULES_FILE, encoding='utf-8-sig')
+    return df, df.set_index('原始關鍵字')['標準渠道名稱'].to_dict()
+
+df_channel_rules, CHANNEL_CLEAN_MAP = load_channel_rules()
 
 def clean_channel_name(val):
     s = str(val).strip() if val is not None else ""
-    # 嚴格過濾：如果不在提供的字典裡，一律視為「未標註」
-    return CHANNEL_CLEAN_MAP.get(s, "未標註")
+    if not s: return "未標註"
+    
+    # 從備註中萃取已知的渠道/產地，避免將無關備註(如"盒損")塞入
+    found = []
+    
+    # 先做精確比對
+    if s in CHANNEL_CLEAN_MAP:
+        return CHANNEL_CLEAN_MAP[s]
+        
+    # 再做模糊萃取
+    for k, v in CHANNEL_CLEAN_MAP.items():
+        if k in s and v not in found:
+            found.append(v)
+            
+    if found:
+        return "/".join(found)
+        
+    return "未標註"
 def extract_quantity(name):
     """從品名規格中精準提取單盒支數"""
     s = str(name).strip()
@@ -371,7 +387,7 @@ def try_structured_parse(df):
     header_row_idx = -1
     for i in range(min(15, len(df))):
         row_str = "".join([str(x).lower() for x in df.iloc[i] if pd.notna(x)])
-        if ("名" in row_str or "品" in row_str) and ("价" in row_str or "價" in row_str or "港" in row_str):
+        if ("名" in row_str or "品" in row_str) and ("价" in row_str or "價" in row_str or "港" in row_str or "批" in row_str):
             header_row_idx = i
             break
 
@@ -380,20 +396,44 @@ def try_structured_parse(df):
     headers = [str(x).lower().replace('\n', '').strip() if pd.notna(x) else "" for x in df.iloc[header_row_idx]]
     
     name_indices = []
-    price_idx, stock_idx = -1, -1
+    price_idx, stock_idx, remark_idx = -1, -1, -1
     
     for j, h in enumerate(headers):
         if any(kw in h for kw in ["名", "品名", "规格", "英文", "中文"]): name_indices.append(j)
-        if any(kw in h for kw in ["价", "價", "港币", "hkd", "rmb"]): price_idx = j
+        if any(kw in h for kw in ["价", "價", "港币", "hkd", "rmb", "批"]): price_idx = j
         if any(kw in h for kw in ["量", "庫存", "现货", "數量", "qty"]): stock_idx = j
+        if any(kw in h for kw in ["備註", "备注", "产地", "渠道", "状态"]): remark_idx = j
             
     if not name_indices or price_idx == -1: return None
         
     structured_records = []
+    current_category = ""
+    
+    # 向前尋找表頭上方是否有第一個分類大標題 (例如 "高希霸（Cohiba）")
+    for i in range(header_row_idx - 1, -1, -1):
+        row = df.iloc[i]
+        valid_cells = [unicodedata.normalize('NFKC', str(x).strip()) for x in row if pd.notna(x) and str(x).strip()]
+        if len(valid_cells) == 1:
+            val = valid_cells[0]
+            if len(val) > 1 and not is_price(val) and not val.isdigit() and "序号" not in val and "品名" not in val:
+                current_category = val
+                break
     for i in range(header_row_idx + 1, len(df)):
         row = df.iloc[i]
+        
+        # 捕捉合併儲存格的大標題 (例如 "大卫杜夫 (Davidoff)")
+        valid_cells = [unicodedata.normalize('NFKC', str(x).strip()) for x in row if pd.notna(x) and str(x).strip()]
+        if len(valid_cells) == 1:
+            val = valid_cells[0]
+            if len(val) > 1 and not is_price(val) and not val.isdigit() and "序号" not in val and "品名" not in val:
+                current_category = val
+                continue
+                
         name_parts = [unicodedata.normalize('NFKC', str(row[j]).strip()) for j in name_indices if pd.notna(row[j]) and str(row[j]).strip()]
         name = " ".join(name_parts)
+        if current_category and name:
+            name = f"[{current_category}] {name}"
+            
         price_val = row[price_idx]
         
         if pd.notna(price_val) and is_price(price_val) and name:
@@ -401,18 +441,23 @@ def try_structured_parse(df):
             if stock_idx != -1 and pd.notna(row[stock_idx]):
                 sv_str = str(row[stock_idx]).replace('支', '').strip()
                 if sv_str.isdigit(): stock_qty = int(sv_str)
+                
+            remark_val = ""
+            if remark_idx != -1 and pd.notna(row[remark_idx]):
+                remark_val = unicodedata.normalize('NFKC', str(row[remark_idx]).strip())
 
             structured_records.append({
                 "name": name,
                 "price": extract_price(price_val),
                 "stock_qty": stock_qty,
+                "remark": remark_val,
                 "raw_row": [unicodedata.normalize('NFKC', str(x).strip()) for x in row if pd.notna(x) and str(x).strip()]
             })
             
     return structured_records if structured_records else None
 
 @st.cache_data(show_spinner=False)
-def parse_file_v5(file_bytes, file_ext):
+def parse_file_v15(file_bytes, file_ext):
     """解析單一檔案，回傳不含供應商的記錄清單（依檔案內容快取，重複上傳不需重算）"""
     structured_data = []
     raw_rows = []
@@ -494,9 +539,13 @@ def parse_file_v5(file_bytes, file_ext):
         qty = extract_quantity(name + " " + " ".join(vals))
         brand = classify_brand(name + " " + " ".join(vals))
         
-        origin_candidates = [v for v in vals if len(v) < 15 and not v.isdigit()
-                             and not any(b in v for b in TARGET_BRANDS)]
-        original_origin = " ".join(origin_candidates) if origin_candidates else ""
+        remark = r.get('remark', "")
+        if remark:
+            original_origin = remark
+        else:
+            origin_candidates = [v for v in vals if len(v) < 15 and not v.isdigit()
+                                 and not any(b in v for b in TARGET_BRANDS)]
+            original_origin = " ".join(origin_candidates) if origin_candidates else ""
         
         final_channel = clean_channel_name(original_origin)
         
@@ -713,14 +762,43 @@ with st.sidebar.expander("⚙️ 品牌關鍵字維護", expanded=False):
     with open(RULES_FILE, "rb") as f:
         st.download_button("📥 下載規則檔", f, file_name=RULES_FILE, mime="text/csv", use_container_width=True)
 
+with st.sidebar.expander("🏷️ 供應商對照維護", expanded=False):
+    st.caption("設定檔名包含特定字眼時，自動歸類為該供應商名稱。")
+    edited_vendors = st.data_editor(df_vendor_rules, num_rows="dynamic", use_container_width=True, hide_index=True)
+    if st.button("💾 儲存供應商規則", use_container_width=True):
+        edited_vendors.to_csv(VENDOR_RULES_FILE, index=False, encoding='utf-8-sig')
+        st.cache_data.clear()
+        st.rerun()
+    if os.path.exists(VENDOR_RULES_FILE):
+        with open(VENDOR_RULES_FILE, "rb") as f:
+            st.download_button("📥 下載供應商對照檔", f, file_name=VENDOR_RULES_FILE, mime="text/csv", use_container_width=True)
+
+with st.sidebar.expander("🌍 渠道/產地對照維護", expanded=False):
+    st.caption("設定備註欄位出現特定字眼時，自動萃取並標準化為該產地/渠道名稱。")
+    edited_channels = st.data_editor(df_channel_rules, num_rows="dynamic", use_container_width=True, hide_index=True)
+    if st.button("💾 儲存渠道規則", use_container_width=True):
+        edited_channels.to_csv(CHANNEL_RULES_FILE, index=False, encoding='utf-8-sig')
+        st.cache_data.clear()
+        st.rerun()
+    if os.path.exists(CHANNEL_RULES_FILE):
+        with open(CHANNEL_RULES_FILE, "rb") as f:
+            st.download_button("📥 下載渠道對照檔", f, file_name=CHANNEL_RULES_FILE, mime="text/csv", use_container_width=True)
+
 st.sidebar.markdown('<div class="step-label">STEP 1 · 上傳報價單</div>', unsafe_allow_html=True)
 uploaded_files = st.sidebar.file_uploader(
     "上傳報價單",
     type=["xlsx", "xls", "pdf"],
     accept_multiple_files=True,
     help="支援 Excel (.xlsx, .xls) 與 PDF，可一次上傳多個檔案",
-    label_visibility="collapsed"
+    label_visibility="collapsed",
+    on_change=clear_results
 )
+
+
+# 過濾掉 Excel 開啟時產生的暫存鎖定檔 (~$ 開頭)
+if uploaded_files:
+    uploaded_files = [f for f in uploaded_files if not f.name.startswith("~$")]
+# ==========================================
 
 # ==========================================
 # 8. 主畫面：空狀態
@@ -802,7 +880,7 @@ if parse_button and uploaded_files:
         vendor = (vendor_map.get(file.name) or get_standard_vendor(file.name)).strip()
         file_ext = file.name.rsplit('.', 1)[-1].lower()
         try:
-            records = parse_file_v5(file.getvalue(), file_ext)
+            records = parse_file_v15(file.getvalue(), file_ext)
             for r in records:
                 all_records.append({"供應商": vendor, **r})
             status = "✅ 成功" if records else "⚠️ 無資料"
