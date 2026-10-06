@@ -183,7 +183,12 @@ RULES_FILE = 'brand_rules.csv'
 VENDOR_RULES_FILE = 'vendor_rules.csv'
 
 DEFAULT_BRAND_RULES = [
-    # 順序很重要：例如 '好友' 必須在 '蒙特' 前面，避免 '好友蒙特利' 誤判為蒙特
+    {"品牌分類": "單支零售", "關鍵字": "单支零售, 單支零售"},
+    {"品牌分類": "PCC", "關鍵字": "pcc"},
+    {"品牌分類": "英飛烽", "關鍵字": "英飞烽, 英飛烽"},
+    {"品牌分類": "煙絲", "關鍵字": "烟丝, 煙絲, 马坝, 馬壩"},
+    {"品牌分類": "拉弗（La Flor de Cano）", "關鍵字": "拉弗, 拉佛, 拉弗洛尔, 拉佛洛, 卡诺之花, 德卡诺, flor de cano"},
+    {"品牌分類": "優民", "關鍵字": "优民, 優民, 优明"},
     {"品牌分類": "富恩特", "關鍵字": "富恩特, fuente, 海明威"},
     {"品牌分類": "我的父親", "關鍵字": "我的父亲, 我的父親, my father"},
     {"品牌分類": "多明尼加之花", "關鍵字": "多米尼加之花, 多明尼加之花, flor dominicana"},
@@ -193,12 +198,12 @@ DEFAULT_BRAND_RULES = [
     {"品牌分類": "高希霸", "關鍵字": "高希霸, cohiba, bhk, 世纪, 半世纪, 魔术师, 导师, 高世紀, 高半世紀"},
     {"品牌分類": "千里達", "關鍵字": "千里达, 千里達, 特立尼达, trinidad, 3t, 雷耶斯, 暗礁, 千裏達, 千裏達"},
     {"品牌分類": "蒙特", "關鍵字": "蒙特, montecristo, 艾蒙多, 1935, 大仲马, 蒙特2号, 蒙特4号"},
-    {"品牌分類": "帕特", "關鍵字": "帕特加斯, partagas, 路西塔尼亚, d4, p2, e2, 帕3特加斯, 帕特佳斯, 帕特"},
+    {"品牌分類": "帕特加斯", "關鍵字": "帕特加斯, partagas, 路西塔尼亚, d4, p2, e2, 帕3特加斯, 帕特佳斯, 帕特"},
     {"品牌分類": "羅密歐與茱麗葉", "關鍵字": "罗密欧, 羅密歐, romeo, 短丘, 宽丘, 丘比特,罗米欧"},
-    {"品牌分類": "烏普曼", "關鍵字": "乌普曼, 烏普曼, upmann, 玛瑙, 鉴赏家, 半皇冠, 优民, 優民, 优民, 優民, 优明"},
+    {"品牌分類": "烏普曼", "關鍵字": "乌普曼, 烏普曼, upmann, 玛瑙, 鉴赏家, 半皇冠"},
     {"品牌分類": "玻利瓦", "關鍵字": "玻利瓦, bolivar, 玻璃瓦尔"},
     {"品牌分類": "雷蒙阿隆尼", "關鍵字": "雷蒙, allones, 雷蒙亚隆, 雷蒙亞隆, ramon allones"},
-    {"品牌分類": "多爾賽碼頭", "關鍵字": "多尔塞, quai, d'orsay, 码头, 多爾賽"},
+    {"品牌分類": "多爾賽", "關鍵字": "多尔塞, quai, d'orsay, 码头, 多爾賽"},
     {"品牌分類": "潘趣", "關鍵字": "潘趣, punch, punch"},
     {"品牌分類": "庫阿巴", "關鍵字": "库阿巴, cuaba, 库亚巴, 庫亞巴, 库亚巴, 庫亞巴, 库阿巴, 库亞巴, 库亚巴"},
     {"品牌分類": "威古洛", "關鍵字": "威古洛, vegueros"},
@@ -207,10 +212,9 @@ DEFAULT_BRAND_RULES = [
     {"品牌分類": "比亞達", "關鍵字": "比亚达, 比雅達, piedra, 猎人, 比亚达, 比雅达,比亞達"},
     {"品牌分類": "金特羅", "關鍵字": "金特罗, quintero, 挚爱, 君特罗, 君特羅, 君特罗, 君特羅, 金特罗, 金特羅"},
     {"品牌分類": "世界之王", "關鍵字": "世界之王, rey del mundo"},
-    {"品牌分類": "卡諾之花", "關鍵字": "卡诺之花, flor de cano, 拉弗洛尔, 德卡诺, la flor de cano, 拉佛, 拉斐洛尔"},
     {"品牌分類": "古巴榮耀", "關鍵字": "古巴荣耀, gloria cubana"},
     {"品牌分類": "拉斐爾", "關鍵字": "拉斐尔, rafael gonzalez, 拉菲尔"},
-    {"品牌分類": "豐塞卡", "關鍵字": "丰塞卡, fonseca"},
+    {"品牌分類": "豐塞卡", "關鍵字": "丰塞卡, 豐塞卡, fonseca"},
     {"品牌分類": "羅賓納", "關鍵字": "罗宾纳, robaina, 罗宾娜, 羅賓娜"},
     {"品牌分類": "大衛杜夫", "關鍵字": "大卫杜夫, davidoff, 大卫, 大衛"},
     {"品牌分類": "潮牌CAO", "關鍵字": "潮牌, cao"},
@@ -464,7 +468,18 @@ def try_structured_parse(df):
         name = " ".join(name_parts)
         price_val = row[price_idx]
         
-        if pd.notna(price_val) and is_price(price_val) and name:
+        if name:
+            price_extracted = extract_price(price_val) if pd.notna(price_val) and is_price(price_val) else None
+
+            if price_extracted is None:
+                exclude_keywords = ['品名', '规格', '价格', '数量', '库存', '备注', '序号', '单位', '产地', '渠道', '说明', '型号', '条码', '包装', '零售价', '批发价']
+                if any(h in name for h in exclude_keywords):
+                    continue
+                has_digit = any(char.isdigit() for char in name)
+                is_known_brand = (classify_brand(name) != "其他品牌")
+                if not has_digit and not is_known_brand:
+                    continue
+
             stock_qty = None
             if stock_idx != -1 and pd.notna(row[stock_idx]):
                 sv_str = str(row[stock_idx]).replace('支', '').strip()
@@ -476,7 +491,7 @@ def try_structured_parse(df):
 
             structured_records.append({
                 "name": name,
-                "price": extract_price(price_val),
+                "price": price_extracted,
                 "stock_qty": stock_qty,
                 "remark": remark_val,
                 "raw_row": ([current_category] if current_category else []) + [unicodedata.normalize('NFKC', str(x).strip()) for x in row if pd.notna(x) and str(x).strip()]
@@ -485,7 +500,7 @@ def try_structured_parse(df):
     return structured_records if structured_records else None
 
 @st.cache_data(show_spinner=False)
-def parse_file_v27(file_bytes, file_ext):
+def parse_file_v28(file_bytes, file_ext):
     """解析單一檔案，回傳不含供應商的記錄清單（依檔案內容快取，重複上傳不需重算）"""
     structured_data = []
     raw_rows = []
@@ -535,7 +550,9 @@ def parse_file_v27(file_bytes, file_ext):
         if len(vals) == 1:
             vals = [x.strip() for x in re.split(r'\s{2,}|\t', vals[0]) if x.strip()]
         if len(vals) < 2:
-            continue
+            # 如果單一儲存格長度夠長且包含數字（如 "比亚达小猎人12支"），則認定為缺少價格的品項，否則跳過
+            if not (len(vals) == 1 and len(vals[0]) > 4 and any(char.isdigit() for char in vals[0])):
+                continue
 
         price, name = None, None
         for v in reversed(vals):
@@ -544,13 +561,25 @@ def parse_file_v27(file_bytes, file_ext):
                 vals.remove(v)
                 break
 
-        if price:
-            candidates = [v for v in vals if not v.isdigit()]
-            if candidates:
-                name = " ".join(candidates)
-                for c in candidates: vals.remove(c)
+        candidates = [v for v in vals if not v.isdigit()]
+        if candidates:
+            name = " ".join(candidates)
+            for c in candidates: vals.remove(c)
 
-        if name and price:
+        if name:
+            if price is None:
+                # 若沒有價格，排除純表頭或無意義字眼
+                exclude_keywords = ['品名', '规格', '价格', '数量', '库存', '备注', '序号', '单位', '产地', '渠道', '说明', '型号', '条码', '包装', '零售价', '批发价']
+                if any(h in name for h in exclude_keywords):
+                    continue
+                
+                # 如果既沒有數字，也不包含任何目標品牌，則視為無效內容（如頁碼或雜項文字）
+                has_digit = any(char.isdigit() for char in name)
+                is_known_brand = (classify_brand(name) != "其他品牌")
+                
+                if not has_digit and not is_known_brand:
+                    continue
+
             structured_data.append({
                 "name": name,
                 "price": price,
@@ -608,6 +637,11 @@ def build_best_price(df):
     if df.empty:
         return pd.DataFrame()
     d = df.reset_index(drop=True)
+    # 排除價格是 NaN 的紀錄，因為無價格的品項無法比價
+    d = d[d['價格'].notna()]
+    if d.empty:
+        return pd.DataFrame()
+        
     keys = ['品牌分類', '品名規格']
     agg = d.groupby(keys).agg(報價家數=('供應商', 'nunique'), 最低價=('價格', 'min'), 最高價=('價格', 'max'))
     best_vendor = d.loc[d.groupby(keys)['價格'].idxmin()].set_index(keys)['供應商'].rename('最低價供應商')
@@ -663,7 +697,8 @@ def generate_excel(df_list, df_best, pivot):
         qty = int(qty) if pd.notna(qty) else ''
         stock = row.get('庫存盒數')
         stock = int(stock) if pd.notna(stock) else ''
-        ws_list.append([row['供應商'], row['品牌分類'], row['品名規格'], qty, stock, int(row['價格']), row.get('渠道/產地', '')])
+        price_val = int(row['價格']) if pd.notna(row['價格']) else ''
+        ws_list.append([row['供應商'], row['品牌分類'], row['品名規格'], qty, stock, price_val, row.get('渠道/產地', '')])
     for c in range(1, 8):
         ws_list.cell(row=1, column=c).font = Font(name=FONT_NAME, size=11, bold=True, color='FFFFFF')
         ws_list.cell(row=1, column=c).alignment = Alignment(horizontal='center', vertical='center')
@@ -675,7 +710,7 @@ def generate_excel(df_list, df_best, pivot):
                 cell.alignment = Alignment(horizontal='center', vertical='center')
             elif c == 6:
                 cell.alignment = Alignment(horizontal='right', vertical='center')
-                cell.number_format = '#,##0'
+                if cell.value != '': cell.number_format = '#,##0'
     if ws_list.max_row > 1:
         tab = Table(displayName="DataList", ref=f"A1:G{ws_list.max_row}")
         tab.tableStyleInfo = TableStyleInfo(name="TableStyleMedium9", showRowStripes=True)
@@ -696,7 +731,7 @@ def generate_excel(df_list, df_best, pivot):
             r = ws_pv.max_row
             for i, v in enumerate(values):
                 cell = ws_pv.cell(row=r, column=3 + i)
-                cell.number_format = '#,##0'
+                if v is not None: cell.number_format = '#,##0'
                 cell.border = thin_border
                 if v is not None and v == min_v and len(valid) > 1:
                     cell.fill, cell.font = best_fill, bold_font
@@ -737,14 +772,18 @@ def generate_excel(df_list, df_best, pivot):
     for brand in TARGET_BRANDS + ["其他品牌"]:
         subset = df_list[df_list['品牌分類'] == brand]
         if not subset.empty:
-            ws_sum.append([brand, len(subset), subset['供應商'].nunique(),
-                           int(subset['價格'].min()), int(subset['價格'].max()), round(subset['價格'].mean(), 1)])
+            prices = subset['價格'].dropna()
+            min_p = int(prices.min()) if not prices.empty else ''
+            max_p = int(prices.max()) if not prices.empty else ''
+            mean_p = round(prices.mean(), 1) if not prices.empty else ''
+            
+            ws_sum.append([brand, len(subset), subset['供應商'].nunique(), min_p, max_p, mean_p])
     _style_header(ws_sum, 6, green_fill)
     for r in range(2, ws_sum.max_row + 1):
         for c in range(1, 7):
             cell = ws_sum.cell(row=r, column=c)
             cell.font, cell.border = (bold_font if c == 1 else body_font), thin_border
-            if c >= 4:
+            if c >= 4 and cell.value != '':
                 cell.number_format = '#,##0'
     ws_sum.auto_filter.ref = f"A1:F{ws_sum.max_row}"
     ws_sum.freeze_panes = 'A2'
@@ -921,7 +960,7 @@ if parse_button and uploaded_files:
         vendor = (vendor_map.get(file.name) or get_standard_vendor(file.name)).strip()
         file_ext = file.name.rsplit('.', 1)[-1].lower()
         try:
-            records = parse_file_v27(file.getvalue(), file_ext)
+            records = parse_file_v28(file.getvalue(), file_ext)
             for r in records:
                 all_records.append({"供應商": vendor, **r})
             status = "✅ 成功" if records else "⚠️ 無資料"
@@ -962,8 +1001,11 @@ if 'df_result' in st.session_state:
     # --- 側邊欄：步驟 3 篩選器 ---
     st.sidebar.markdown('<div class="step-label">STEP 3 · 篩選資料</div>', unsafe_allow_html=True)
 
-    price_min = int(df_result['價格'].min())
-    price_max = int(df_result['價格'].max())
+    # 處理可能的 NaN 價格，給定預設值避免 max() / min() 錯誤
+    valid_prices = df_result['價格'].dropna()
+    price_min = int(valid_prices.min()) if not valid_prices.empty else 0
+    price_max = int(valid_prices.max()) if not valid_prices.empty else 0
+    
     if price_max <= price_min:          # 所有價格相同時，滑桿需要不同的上下限
         price_max = price_min + 50
     price_bounds = (price_min, price_max)
@@ -1032,7 +1074,8 @@ if 'df_result' in st.session_state:
     if selected_stock == '僅看在席現貨 (庫存 > 0)': df_display = df_display[df_display['庫存盒數'] > 0]
     elif selected_stock == '大宗現貨 (≥ 5盒)': df_display = df_display[df_display['庫存盒數'] >= 5]
         
-    df_display = df_display[(df_display['價格'] >= price_range[0]) & (df_display['價格'] <= price_range[1])]
+    # 修改篩選器邏輯，保留 NaN (無價格) 的資料，或者價格在區間內
+    df_display = df_display[df_display['價格'].isna() | ((df_display['價格'] >= price_range[0]) & (df_display['價格'] <= price_range[1]))]
     if keyword:
         # 多關鍵字：以空格分隔，需同時符合（AND）
         for kw in keyword.split():
@@ -1081,9 +1124,11 @@ if 'df_result' in st.session_state:
     k1.metric("篩選品項", f"{len(df_display):,} 筆")
     k2.metric("供應商", f"{df_display['供應商'].nunique()} 家")
     k3.metric("品牌", f"{df_display['品牌分類'].nunique()} 個")
-    if not df_display.empty:
-        k4.metric("最低價", f"${int(df_display['價格'].min()):,}")
-        k5.metric("平均價", f"${int(df_display['價格'].mean()):,}")
+    
+    valid_prices_disp = df_display['價格'].dropna()
+    if not valid_prices_disp.empty:
+        k4.metric("最低價", f"${int(valid_prices_disp.min()):,}")
+        k5.metric("平均價", f"${int(valid_prices_disp.mean()):,}")
         k6.metric("可比價品項", f"{len(df_best):,} 款", help="同一品名在 2 家以上供應商有報價的款數")
     else:
         k4.metric("最低價", "—"); k5.metric("平均價", "—"); k6.metric("可比價品項", "—")
