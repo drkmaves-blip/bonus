@@ -14,7 +14,13 @@ from datetime import datetime
 
 def s2t(text):
     if pd.isna(text): return text
-    return HanziConv.toTraditional(str(text))
+    from hanziconv import HanziConv
+    res = HanziConv.toTraditional(str(text))
+    # 修正常見錯字與過度轉換
+    res = res.replace('濛特', '蒙特')
+    res = res.replace('韆裏達', '千里達')
+    res = res.replace('彆墅', '別墅')
+    return res
 
 APP_VERSION = "v2.3"
 
@@ -27,6 +33,65 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ==========================================
+# PWA 支援 (手機主畫面安裝)
+# ==========================================
+import streamlit.components.v1 as components
+import base64
+
+def setup_pwa():
+    manifest_json = """
+    {
+      "name": "雪茄批發報價系統",
+      "short_name": "雪茄報價",
+      "theme_color": "#2C5364",
+      "background_color": "#ffffff",
+      "display": "standalone",
+      "scope": "/",
+      "start_url": "/",
+      "icons": [
+        {
+          "src": "https://cdn-icons-png.flaticon.com/512/3014/3014283.png",
+          "sizes": "512x512",
+          "type": "image/png",
+          "purpose": "any maskable"
+        }
+      ]
+    }
+    """
+    b64_manifest = base64.b64encode(manifest_json.encode('utf-8')).decode('utf-8')
+    manifest_url = f"data:application/manifest+json;base64,{b64_manifest}"
+
+    components.html(f"""
+    <script>
+    const parentDoc = window.parent.document;
+    if (!parentDoc.querySelector('link[rel="manifest"]')) {{
+        const manifestLink = parentDoc.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = '{manifest_url}';
+        parentDoc.head.appendChild(manifestLink);
+        
+        const appleMeta1 = parentDoc.createElement('meta');
+        appleMeta1.name = 'apple-mobile-web-app-capable';
+        appleMeta1.content = 'yes';
+        parentDoc.head.appendChild(appleMeta1);
+        
+        const appleMeta2 = parentDoc.createElement('meta');
+        appleMeta2.name = 'apple-mobile-web-app-status-bar-style';
+        appleMeta2.content = 'black-translucent';
+        parentDoc.head.appendChild(appleMeta2);
+        
+        const appleIcon = parentDoc.createElement('link');
+        appleIcon.rel = 'apple-touch-icon';
+        appleIcon.href = 'https://cdn-icons-png.flaticon.com/512/3014/3014283.png';
+        parentDoc.head.appendChild(appleIcon);
+    }}
+    </script>
+    """, height=0, width=0)
+
+setup_pwa()
+
 
 # ==========================================
 # 全域 CSS 樣式
@@ -260,7 +325,7 @@ def get_standard_vendor(filename):
     """根據檔名關鍵字自動標準化供應商名稱"""
     if not df_vendor_rules.empty:
         for _, row in df_vendor_rules.iterrows():
-            if HanziConv.toTraditional(str(row['檔名關鍵字'])) in HanziConv.toTraditional(filename):
+            if s2t(str(row['檔名關鍵字'])) in s2t(filename):
                 return str(row['標準供應商名稱'])
     name = filename.rsplit('.', 1)[0]
     name = re.sub(r'\d{1,2}\.\d{1,2}', '', name)
@@ -274,8 +339,8 @@ def classify_brand(pname):
     text = str(pname).lower()
 
     # 針對「好友蒙特利」的特例處理（避免誤判為蒙特）
-    is_hoyo = any(HanziConv.toTraditional(k) in text for k in ['好友', 'hoyo', 'epicure', '逍遥', '赛科', '聖胡安', '帕尔马斯'])
-    is_monte = any(HanziConv.toTraditional(k) in text for k in ['蒙特克里斯托', 'montecristo', '蒙特2号', '蒙特4号'])
+    is_hoyo = any(s2t(k) in text for k in ['好友', 'hoyo', 'epicure', '逍遥', '赛科', '聖胡安', '帕尔马斯'])
+    is_monte = any(s2t(k) in text for k in ['蒙特', '蒙特克里斯托', 'montecristo', '濛特'])
     if is_hoyo and not is_monte:
         return '好友'
 
@@ -284,7 +349,7 @@ def classify_brand(pname):
         if brand == '好友': continue # 特例已處理
         
         # 解析關鍵字清單，忽略空值
-        keywords = [HanziConv.toTraditional(k.strip().lower()) for k in str(row['關鍵字']).split(',') if k.strip()]
+        keywords = [s2t(k.strip().lower()) for k in str(row['關鍵字']).split(',') if k.strip()]
         if any(k in text for k in keywords):
             return brand
 
@@ -314,12 +379,12 @@ def clean_channel_name(val):
     
     # 先做精確比對 (忽略大小寫)
     for k, v in CHANNEL_CLEAN_MAP.items():
-        if s_lower == HanziConv.toTraditional(str(k)).lower():
+        if s_lower == s2t(str(k)).lower():
             return v
         
     # 再做模糊萃取 (忽略大小寫)
     for k, v in CHANNEL_CLEAN_MAP.items():
-        if HanziConv.toTraditional(str(k)).lower() in s_lower and v not in found:
+        if s2t(str(k)).lower() in s_lower and v not in found:
             found.append(v)
             
     if found:
@@ -616,12 +681,15 @@ def parse_file_v28(file_bytes, file_ext):
         if final_channel != "未標註":
             # 把被萃取為產地的關鍵字從品名中拔除，保持品名乾淨
             for k, v in CHANNEL_CLEAN_MAP.items():
-                if str(k).lower() in name.lower() and v in final_channel:
-                    name = re.sub(re.escape(str(k)), '', name, flags=re.IGNORECASE).strip()
+                k_trad = s2t(str(k))
+                if k_trad.lower() in name.lower() and v in final_channel:
+                    name = re.sub(re.escape(k_trad), '', name, flags=re.IGNORECASE).strip()
             
             # 若原始 origin 字串剛好也完整在品名中，也一併移除
-            if original_origin and original_origin.lower() in name.lower():
-                name = re.sub(re.escape(original_origin), '', name, flags=re.IGNORECASE).strip()
+            if original_origin:
+                origin_trad = s2t(original_origin)
+                if origin_trad.lower() in name.lower():
+                    name = re.sub(re.escape(origin_trad), '', name, flags=re.IGNORECASE).strip()
         
         # 移除多餘的空白、括號、連接詞與逗號
         name = re.sub(r'[\(\[\{]\s*[\)\]\}]', '', name).strip(' -_/,，。')
@@ -638,24 +706,29 @@ def parse_file_v28(file_bytes, file_ext):
     return records
 
 def build_best_price(df):
-    """建立「最低價排行」：同品名在 2 家以上供應商有報價時，計算最低價與價差"""
     if df.empty:
         return pd.DataFrame()
     d = df.reset_index(drop=True)
-    # 排除價格是 NaN 的紀錄，因為無價格的品項無法比價
     d = d[d['價格'].notna()]
     if d.empty:
         return pd.DataFrame()
         
     keys = ['品牌分類', '品名規格']
-    agg = d.groupby(keys).agg(報價家數=('供應商', 'nunique'), 最低價=('價格', 'min'), 最高價=('價格', 'max'))
-    best_vendor = d.loc[d.groupby(keys)['價格'].idxmin()].set_index(keys)['供應商'].rename('最低價供應商')
-    out = agg.join(best_vendor).reset_index()
-    out = out[out['報價家數'] >= 2].copy()
-    out['價差'] = out['最高價'] - out['最低價']
-    out['價差%'] = (out['價差'] / out['最低價'] * 100).round(1)
-    out = out[['品牌分類', '品名規格', '最低價供應商', '最低價', '最高價', '價差', '價差%', '報價家數']]
-    return out.sort_values('價差', ascending=False).reset_index(drop=True)
+    agg = d.groupby(keys).agg(報價家數=('供應商', 'nunique'), 最低價=('價格', 'min'), 最高價=('價格', 'max')).reset_index()
+    agg = agg[agg['報價家數'] >= 2].copy()
+    if agg.empty:
+        return pd.DataFrame()
+        
+    agg['價差'] = agg['最高價'] - agg['最低價']
+    agg['價差%'] = (agg['價差'] / agg['最低價'] * 100).round(1)
+    
+    min_quotes = pd.merge(d, agg[keys + ['最低價']], on=keys)
+    min_quotes = min_quotes[min_quotes['價格'] == min_quotes['最低價']]
+    min_quotes = min_quotes[['品牌分類', '品名規格', '供應商', '渠道/產地']].rename(columns={'供應商': '最低價供應商'})
+    
+    out = pd.merge(agg, min_quotes, on=keys, how='left')
+    out = out[['品牌分類', '品名規格', '報價家數', '最低價供應商', '渠道/產地', '最低價', '最高價', '價差', '價差%']]
+    return out.sort_values(['價差', '品牌分類', '品名規格'], ascending=[False, True, True]).reset_index(drop=True)
 
 def build_pivot(df):
     if df.empty:
@@ -736,6 +809,39 @@ def generate_excel(df_list, df_best, unique_vendors):
         ws_list.add_table(tab)
     ws_list.freeze_panes = 'A2'
     _autofit(ws_list)
+
+    if not df_best.empty:
+        ws_best = wb.create_sheet(title='最低價排行')
+        ws_best.append(['品名規格', '比價家數', '最低價供應商', '渠道/產地', '最低價 (HKD)', '最高價 (HKD)', '價差'])
+        for _, row in df_best.iterrows():
+            ws_best.append([row['品名規格'], row['報價家數'], row['最低價供應商'], row.get('渠道/產地', ''), row['最低價'], row['最高價'], row['價差']])
+        
+        # Style ws_best
+        header_font = Font(name=FONT_NAME, size=11, bold=True, color='000000')
+        header_fill = PatternFill(start_color='D4EDDA', end_color='D4EDDA', fill_type='solid')
+        for c in range(1, 8):
+            cell = ws_best.cell(row=1, column=c)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            
+        for r in range(2, ws_best.max_row + 1):
+            vendor_name = ws_best.cell(row=r, column=3).value
+            vendor_fill = v_cmap.get(vendor_name)
+            for c in range(1, 8):
+                cell = ws_best.cell(row=r, column=c)
+                cell.border = thin_border
+                cell.font = bold_font if c == 3 else body_font
+                if vendor_fill and c == 3:
+                    cell.fill = vendor_fill
+                if c in [2, 3, 4]:
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                elif c in [5, 6, 7]:
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                    if cell.value != '': cell.number_format = '#,##0'
+        ws_best.freeze_panes = 'A2'
+        _autofit(ws_best)
 
     wb.save(output)
     return output.getvalue()
@@ -1109,7 +1215,7 @@ if 'df_result' in st.session_state:
                 use_container_width=True,
             )
     with dl3:
-        st.caption("💡 下載內容會套用目前的篩選條件。Excel 含：全品項清單。")
+        st.caption("💡 下載內容會套用目前的篩選條件。Excel 含：全品項清單、最低價排行。")
 
     # --- 資料檢視分頁 ---
     st.markdown("""
@@ -1140,7 +1246,7 @@ if 'df_result' in st.session_state:
             return df_to_style.style.applymap(color_vendor, subset=[col_name])
 
     other_count = int((df_display['品牌分類'] == '其他品牌').sum())
-    tab_list, tab_other = st.tabs([f"📋 全品項清單 ({len(df_display)})", f"❓ 其他 ({other_count})"])
+    tab_list, tab_best, tab_other = st.tabs([f"📋 全品項清單 ({len(df_display)})", f"🏆 最低價排行 ({len(df_best)})", f"❓ 其他 ({other_count})"])
 
     no_data_msg = "⚠️ 目前篩選條件下無資料，請調整左側篩選器。"
 
@@ -1156,6 +1262,21 @@ if 'df_result' in st.session_state:
                 column_config={
                     "價格": st.column_config.NumberColumn("價格 (HKD)", format="$%d"),
                     "庫存現貨": st.column_config.NumberColumn("庫存現貨", format="%d")
+                }
+            )
+
+    with tab_best:
+        if df_best.empty:
+            st.warning("⚠️ 目前沒有兩家以上的報價可供比價。")
+        else:
+            st.dataframe(
+                apply_vendor_style(df_best, '最低價供應商'),
+                use_container_width=True,
+                height=600,
+                hide_index=True,
+                column_config={
+                    "報價家數": st.column_config.NumberColumn("比價家數", format="%d"),
+                    "最低價": st.column_config.NumberColumn("最低價 (HKD)", format="$%d")
                 }
             )
 
