@@ -795,7 +795,7 @@ def generate_excel(df_list, df_best, pivot):
 # ==========================================
 # 5. 篩選器狀態管理
 # ==========================================
-FILTER_KEYS = ['f_brands', 'f_vendors', 'f_price', 'f_kw', 'f_origin', 'f_stick', 'f_stock']
+FILTER_KEYS = ['f_brands', 'f_vendors', 'f_price', 'f_kw', 'f_origin', 'f_stick', 'f_stock', 'f_include_na']
 
 def reset_filters(price_bounds=None):
     """清除所有篩選條件（真正重置元件狀態）"""
@@ -805,6 +805,7 @@ def reset_filters(price_bounds=None):
     st.session_state['f_origin'] = []
     st.session_state['f_stick'] = '全部規格'
     st.session_state['f_stock'] = '全部（含詢價）'
+    st.session_state['f_include_na'] = True
     if price_bounds:
         st.session_state['f_price'] = price_bounds
 
@@ -1003,7 +1004,7 @@ if 'df_result' in st.session_state:
 
     # 處理可能的 NaN 價格，給定預設值避免 max() / min() 錯誤
     valid_prices = df_result['價格'].dropna()
-    price_min = int(valid_prices.min()) if not valid_prices.empty else 0
+    price_min = 0
     price_max = int(valid_prices.max()) if not valid_prices.empty else 0
     
     if price_max <= price_min:          # 所有價格相同時，滑桿需要不同的上下限
@@ -1039,6 +1040,7 @@ if 'df_result' in st.session_state:
 
     st.sidebar.slider("💰 價格區間 (HKD)", min_value=price_min, max_value=price_max,
                       step=50, format="$%d", key='f_price')
+    st.sidebar.checkbox("包含無標價 / 缺貨品項", value=True, key='f_include_na')
     st.sidebar.text_input("🔎 品名搜尋", key='f_kw', placeholder="短丘、D4、BHK... (空格分隔可多關鍵字)")
 
     c1, c2 = st.sidebar.columns(2)
@@ -1075,7 +1077,10 @@ if 'df_result' in st.session_state:
     elif selected_stock == '大宗現貨 (≥ 5盒)': df_display = df_display[df_display['庫存盒數'] >= 5]
         
     # 修改篩選器邏輯，保留 NaN (無價格) 的資料，或者價格在區間內
-    df_display = df_display[df_display['價格'].isna() | ((df_display['價格'] >= price_range[0]) & (df_display['價格'] <= price_range[1]))]
+    if st.session_state.get('f_include_na', True):
+        df_display = df_display[df_display['價格'].isna() | ((df_display['價格'] >= price_range[0]) & (df_display['價格'] <= price_range[1]))]
+    else:
+        df_display = df_display[df_display['價格'].notna() & (df_display['價格'] >= price_range[0]) & (df_display['價格'] <= price_range[1])]
     if keyword:
         # 多關鍵字：以空格分隔，需同時符合（AND）
         for kw in keyword.split():
@@ -1169,6 +1174,25 @@ if 'df_result' in st.session_state:
     </div>
     """, unsafe_allow_html=True)
 
+    # 供應商顏色配對邏輯
+    unique_vendors = df_result['供應商'].dropna().unique() if not df_result.empty else []
+    v_colors = ['#FFE4E1', '#E6E6FA', '#FFF0F5', '#E0FFFF', '#F0FFF0', 
+                '#F5F5DC', '#FFEBCD', '#F0F8FF', '#F5FFFA', '#FFF8DC', 
+                '#FFFACD', '#F0E68C', '#D8BFD8']
+    v_cmap = {v: v_colors[i % len(v_colors)] for i, v in enumerate(unique_vendors)}
+
+    def color_vendor(val):
+        c = v_cmap.get(val, '')
+        return f'background-color: {c}; color: #333333' if c else ''
+
+    def apply_vendor_style(df_to_style, col_name='供應商'):
+        if df_to_style.empty:
+            return df_to_style
+        if hasattr(df_to_style.style, 'map'):
+            return df_to_style.style.map(color_vendor, subset=[col_name])
+        else:
+            return df_to_style.style.applymap(color_vendor, subset=[col_name])
+
     other_count = int((df_display['品牌分類'] == '其他品牌').sum())
     tab_list, tab_matrix, tab_best, tab_chart, tab_other = st.tabs([
         f"📋 全品項清單 ({len(df_display)})",
@@ -1208,7 +1232,7 @@ if 'df_result' in st.session_state:
         else:
             st.caption("同一品名在 2 家以上供應商有報價時，列出最低價來源與價差（依價差由大到小排序）。")
             st.dataframe(
-                df_best, use_container_width=True, height=600, hide_index=True,
+                apply_vendor_style(df_best, '最低價供應商'), use_container_width=True, height=600, hide_index=True,
                 column_config={
                     "最低價": st.column_config.NumberColumn(format="$%d"),
                     "最高價": st.column_config.NumberColumn(format="$%d"),
@@ -1224,7 +1248,7 @@ if 'df_result' in st.session_state:
             st.warning(no_data_msg)
         else:
             st.dataframe(
-                df_display, use_container_width=True, height=600, hide_index=True,
+                apply_vendor_style(df_display), use_container_width=True, height=600, hide_index=True,
                 column_order=['供應商', '品牌分類', '品名規格', '規格支數', '庫存盒數', '價格', '渠道/產地'],
                 column_config={
                     "價格": st.column_config.NumberColumn("整盒批發價", format="$%d"),
@@ -1256,7 +1280,7 @@ if 'df_result' in st.session_state:
         else:
             st.caption("以下品項沒有匹配到 30 個品牌的關鍵字。可能是非古巴品牌、雜項（如雪茄剪、保濕盒），"
                        "或需要補充品牌關鍵字。把常見的品名告訴我，我可以幫你加入分類規則。")
-            st.dataframe(others, use_container_width=True, height=500, hide_index=True,
+            st.dataframe(apply_vendor_style(others), use_container_width=True, height=500, hide_index=True,
                          column_config={"價格": st.column_config.NumberColumn("價格 (HKD)", format="$%d")})
 
 # --- 頁腳 ---
