@@ -1,0 +1,25 @@
+            return df_to_style.style.map(color_vendor, subset=[col_name])
+        else:
+            return df_to_style.style.applymap(color_vendor, subset=[col_name])
+
+    other_count = int((df_display['品牌分類'] == '其他品牌').sum())
+    tab_list, tab_other = st.tabs([f"📋 全品項清單 ({len(df_display)})", f"❓ 其他 ({other_count})"])
+
+    no_data_msg = "⚠️ 目前篩選條件下無資料，請調整左側篩選器。"
+
+    with tab_other:
+        others = df_display[df_display['品牌分類'] == '其他品牌']
+        if others.empty:
+            st.success("🎉 目前所有品項都已成功分類到 30 個品牌中！")
+        else:
+            st.caption("以下品項沒有匹配到 30 個品牌的關鍵字。可能是非古巴品牌、雜項（如雪茄剪、保濕盒），"
+                       "或需要補充品牌關鍵字。把常見的品名告訴我，我可以幫你加入分類規則。")
+            st.dataframe(apply_vendor_style(others), use_container_width=True, height=500, hide_index=True,
+                         column_config={"價格": st.column_config.NumberColumn("價格 (HKD)", format="$%d")})
+
+# --- 頁腳 ---
+st.sidebar.markdown("---")
+st.sidebar.caption(f"🍂 {APP_VERSION} · {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+st.markdown(f"""
+<div class="footer">
+    🍂 雪茄批發報價自動彙整系統 {APP_VERSION} · Built with Streamlit

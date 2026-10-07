@@ -9,7 +9,12 @@ import re
 import os
 import unicodedata
 import pdfplumber
+from hanziconv import HanziConv
 from datetime import datetime
+
+def s2t(text):
+    if pd.isna(text): return text
+    return HanziConv.toTraditional(str(text))
 
 APP_VERSION = "v2.3"
 
@@ -255,7 +260,7 @@ def get_standard_vendor(filename):
     """根據檔名關鍵字自動標準化供應商名稱"""
     if not df_vendor_rules.empty:
         for _, row in df_vendor_rules.iterrows():
-            if str(row['檔名關鍵字']) in filename:
+            if HanziConv.toTraditional(str(row['檔名關鍵字'])) in HanziConv.toTraditional(filename):
                 return str(row['標準供應商名稱'])
     name = filename.rsplit('.', 1)[0]
     name = re.sub(r'\d{1,2}\.\d{1,2}', '', name)
@@ -269,8 +274,8 @@ def classify_brand(pname):
     text = str(pname).lower()
 
     # 針對「好友蒙特利」的特例處理（避免誤判為蒙特）
-    is_hoyo = any(k in text for k in ['好友', 'hoyo', 'epicure', '逍遥', '赛科', '聖胡安', '帕尔马斯'])
-    is_monte = any(k in text for k in ['蒙特克里斯托', 'montecristo', '蒙特2号', '蒙特4号'])
+    is_hoyo = any(HanziConv.toTraditional(k) in text for k in ['好友', 'hoyo', 'epicure', '逍遥', '赛科', '聖胡安', '帕尔马斯'])
+    is_monte = any(HanziConv.toTraditional(k) in text for k in ['蒙特克里斯托', 'montecristo', '蒙特2号', '蒙特4号'])
     if is_hoyo and not is_monte:
         return '好友'
 
@@ -279,7 +284,7 @@ def classify_brand(pname):
         if brand == '好友': continue # 特例已處理
         
         # 解析關鍵字清單，忽略空值
-        keywords = [k.strip().lower() for k in str(row['關鍵字']).split(',') if k.strip()]
+        keywords = [HanziConv.toTraditional(k.strip().lower()) for k in str(row['關鍵字']).split(',') if k.strip()]
         if any(k in text for k in keywords):
             return brand
 
@@ -309,12 +314,12 @@ def clean_channel_name(val):
     
     # 先做精確比對 (忽略大小寫)
     for k, v in CHANNEL_CLEAN_MAP.items():
-        if s_lower == str(k).lower():
+        if s_lower == HanziConv.toTraditional(str(k)).lower():
             return v
         
     # 再做模糊萃取 (忽略大小寫)
     for k, v in CHANNEL_CLEAN_MAP.items():
-        if str(k).lower() in s_lower and v not in found:
+        if HanziConv.toTraditional(str(k)).lower() in s_lower and v not in found:
             found.append(v)
             
     if found:
@@ -531,7 +536,7 @@ def parse_file_v28(file_bytes, file_ext):
                     for table in tables:
                         for row in table:
                             if row:
-                                cells = [unicodedata.normalize('NFKC', str(x).strip()) for x in row if x and str(x).strip()]
+                                cells = [unicodedata.normalize('NFKC', s2t(str(x)).strip()) for x in row if x and str(x).strip()]
                                 if cells:
                                     _split_chunk(cells, raw_rows)
                 else:
@@ -589,14 +594,14 @@ def parse_file_v28(file_bytes, file_ext):
 
     records = []
     for r in structured_data:
-        name = r['name']
+        name = s2t(r['name'])
         price = r['price']
-        vals = r['raw_row']
+        vals = [s2t(v) for v in r['raw_row']]
         
         qty = extract_quantity(name + " " + " ".join(vals))
         brand = classify_brand(name + " " + " ".join(vals))
         
-        remark = r.get('remark', "")
+        remark = s2t(r.get('remark', ""))
         if remark:
             original_origin = remark
         else:
@@ -676,7 +681,7 @@ def _style_header(ws, ncols, fill):
         c.alignment = Alignment(horizontal='center', vertical='center')
 
 @st.cache_data(show_spinner=False)
-def generate_excel(df_list, df_best, pivot):
+def generate_excel(df_list, df_best, unique_vendors):
     """產出含 4 個工作表的 Excel：全品項清單、跨店比價矩陣、最低價排行、品牌統計"""
     output = io.BytesIO()
     wb = openpyxl.Workbook()
@@ -699,13 +704,27 @@ def generate_excel(df_list, df_best, pivot):
         stock = int(stock) if pd.notna(stock) else ''
         price_val = int(row['價格']) if pd.notna(row['價格']) else ''
         ws_list.append([row['供應商'], row['品牌分類'], row['品名規格'], qty, stock, price_val, row.get('渠道/產地', '')])
+    v_colors = ['FFE4E1', 'E6E6FA', 'FFF0F5', 'E0FFFF', 'F0FFF0', 
+                'F5F5DC', 'FFEBCD', 'F0F8FF', 'F5FFFA', 'FFF8DC', 
+                'FFFACD', 'F0E68C', 'D8BFD8']
+    v_cmap = {v: PatternFill(start_color=v_colors[i % len(v_colors)], end_color=v_colors[i % len(v_colors)], fill_type='solid') for i, v in enumerate(unique_vendors)}
+
+    header_fill = PatternFill(start_color='E5E7EB', end_color='E5E7EB', fill_type='solid')
     for c in range(1, 8):
-        ws_list.cell(row=1, column=c).font = Font(name=FONT_NAME, size=11, bold=True, color='FFFFFF')
-        ws_list.cell(row=1, column=c).alignment = Alignment(horizontal='center', vertical='center')
+        cell = ws_list.cell(row=1, column=c)
+        cell.font = Font(name=FONT_NAME, size=11, bold=True, color='000000')
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = thin_border
     for r in range(2, ws_list.max_row + 1):
+        vendor_name = ws_list.cell(row=r, column=1).value
+        vendor_fill = v_cmap.get(vendor_name)
         for c in range(1, 8):
             cell = ws_list.cell(row=r, column=c)
-            cell.font = bold_font if c == 2 else body_font
+            cell.font = bold_font if c == 1 else body_font
+            cell.border = thin_border
+            if vendor_fill and c == 1:
+                cell.fill = vendor_fill
             if c in [1, 2, 4, 5, 7]:
                 cell.alignment = Alignment(horizontal='center', vertical='center')
             elif c == 6:
@@ -713,81 +732,10 @@ def generate_excel(df_list, df_best, pivot):
                 if cell.value != '': cell.number_format = '#,##0'
     if ws_list.max_row > 1:
         tab = Table(displayName="DataList", ref=f"A1:G{ws_list.max_row}")
-        tab.tableStyleInfo = TableStyleInfo(name="TableStyleMedium9", showRowStripes=True)
+        tab.tableStyleInfo = TableStyleInfo(name="TableStyleLight1", showRowStripes=False)
         ws_list.add_table(tab)
     ws_list.freeze_panes = 'A2'
     _autofit(ws_list)
-
-    # --- 工作表 2：跨店比價矩陣（最低價綠底標示） ---
-    ws_pv = wb.create_sheet(title='跨店比價矩陣')
-    if not pivot.empty:
-        vendors = list(pivot.columns)
-        ws_pv.append(['品牌分類', '品名規格'] + vendors)
-        for (brand, pname), row in pivot.iterrows():
-            values = [None if pd.isna(v) else int(v) for v in row]
-            ws_pv.append([brand, pname] + values)
-            valid = [v for v in values if v is not None]
-            min_v = min(valid) if valid else None
-            r = ws_pv.max_row
-            for i, v in enumerate(values):
-                cell = ws_pv.cell(row=r, column=3 + i)
-                if v is not None: cell.number_format = '#,##0'
-                cell.border = thin_border
-                if v is not None and v == min_v and len(valid) > 1:
-                    cell.fill, cell.font = best_fill, bold_font
-                else:
-                    cell.font = body_font
-            ws_pv.cell(row=r, column=1).font = bold_font
-            ws_pv.cell(row=r, column=2).font = body_font
-        _style_header(ws_pv, 2 + len(vendors), navy_fill)
-        ws_pv.auto_filter.ref = f"A1:{get_column_letter(2 + len(vendors))}{ws_pv.max_row}"
-        ws_pv.freeze_panes = 'C2'
-        _autofit(ws_pv)
-
-    # --- 工作表 3：最低價排行 ---
-    ws_best = wb.create_sheet(title='最低價排行')
-    if not df_best.empty:
-        ws_best.append(list(df_best.columns))
-        for row in df_best.itertuples(index=False):
-            ws_best.append(list(row))
-        _style_header(ws_best, len(df_best.columns), green_fill)
-        for r in range(2, ws_best.max_row + 1):
-            for c in range(1, len(df_best.columns) + 1):
-                cell = ws_best.cell(row=r, column=c)
-                cell.font, cell.border = body_font, thin_border
-                if c in [4, 5, 6]:
-                    cell.number_format = '#,##0'
-                elif c == 7:
-                    cell.number_format = '0.0"%"'
-            ws_best.cell(row=r, column=3).font = bold_font
-        ws_best.auto_filter.ref = f"A1:{get_column_letter(len(df_best.columns))}{ws_best.max_row}"
-        ws_best.freeze_panes = 'A2'
-        _autofit(ws_best)
-    else:
-        ws_best.append(['目前沒有同時出現在 2 家以上供應商的品項'])
-
-    # --- 工作表 4：品牌分類統計 ---
-    ws_sum = wb.create_sheet(title='品牌分類統計')
-    ws_sum.append(['品牌名稱', '報價筆數', '供應商數', '最低報價(HKD)', '最高報價(HKD)', '平均報價(HKD)'])
-    for brand in TARGET_BRANDS + ["其他品牌"]:
-        subset = df_list[df_list['品牌分類'] == brand]
-        if not subset.empty:
-            prices = subset['價格'].dropna()
-            min_p = int(prices.min()) if not prices.empty else ''
-            max_p = int(prices.max()) if not prices.empty else ''
-            mean_p = round(prices.mean(), 1) if not prices.empty else ''
-            
-            ws_sum.append([brand, len(subset), subset['供應商'].nunique(), min_p, max_p, mean_p])
-    _style_header(ws_sum, 6, green_fill)
-    for r in range(2, ws_sum.max_row + 1):
-        for c in range(1, 7):
-            cell = ws_sum.cell(row=r, column=c)
-            cell.font, cell.border = (bold_font if c == 1 else body_font), thin_border
-            if c >= 4 and cell.value != '':
-                cell.number_format = '#,##0'
-    ws_sum.auto_filter.ref = f"A1:F{ws_sum.max_row}"
-    ws_sum.freeze_panes = 'A2'
-    _autofit(ws_sum)
 
     wb.save(output)
     return output.getvalue()
@@ -895,11 +843,9 @@ if not uploaded_files and 'df_result' not in st.session_state:
 
     features = [
         ("🤖", "智慧解析引擎", "自動辨識 30 個品牌與供應商；並排報價、多工作表、PDF 皆可解析。"),
-        ("📊", "跨店比價矩陣", "同一款雪茄各家報價橫向展開，最低價自動綠底標示。"),
-        ("🏆", "最低價排行", "列出 2 家以上有報價的品項，依價差排序，找出最划算的進貨來源。"),
         ("📥", "多工作表 Excel", "清單、比價矩陣、最低價排行、品牌統計，一個檔案全部帶走。"),
     ]
-    cols = st.columns(4)
+    cols = st.columns(1)
     for col, (icon, title, desc) in zip(cols, features):
         col.markdown(f"""
         <div class="feature-card">
@@ -1145,7 +1091,7 @@ if 'df_result' in st.session_state:
     with dl1:
         if not df_display.empty:
             with st.spinner("正在產生 Excel..."):
-                excel_bytes = generate_excel(df_display, df_best, pivot_df)
+                excel_bytes = generate_excel(df_display, df_best, list(df_result['供應商'].dropna().unique()))
             st.download_button(
                 label="📥 下載完整 Excel（4 個工作表）",
                 data=excel_bytes,
@@ -1163,7 +1109,7 @@ if 'df_result' in st.session_state:
                 use_container_width=True,
             )
     with dl3:
-        st.caption("💡 下載內容會套用目前的篩選條件。Excel 含：全品項清單、跨店比價矩陣、最低價排行、品牌統計。")
+        st.caption("💡 下載內容會套用目前的篩選條件。Excel 含：全品項清單。")
 
     # --- 資料檢視分頁 ---
     st.markdown("""
@@ -1194,84 +1140,24 @@ if 'df_result' in st.session_state:
             return df_to_style.style.applymap(color_vendor, subset=[col_name])
 
     other_count = int((df_display['品牌分類'] == '其他品牌').sum())
-    tab_list, tab_matrix, tab_best, tab_chart, tab_other = st.tabs([
-        f"📋 全品項清單 ({len(df_display)})",
-        "📊 跨店比價矩陣",
-        f"🏆 最低價排行 ({len(df_best)})",
-        "📈 統計圖表",
-        f"⚠️ 未分類品項 ({other_count})",
-    ])
+    tab_list, tab_other = st.tabs([f"📋 全品項清單 ({len(df_display)})", f"❓ 其他 ({other_count})"])
 
     no_data_msg = "⚠️ 目前篩選條件下無資料，請調整左側篩選器。"
-
-    with tab_matrix:
-        if pivot_df.empty:
-            st.warning(no_data_msg)
-        else:
-            only_multi = st.toggle("只顯示 2 家以上有報價的品項", value=False, key="matrix_only_multi")
-            show_pivot = pivot_df[pivot_df.notna().sum(axis=1) >= 2] if only_multi else pivot_df
-            st.caption(f"💡 綠底粗體 = 該品項的最低報價 · 共 {len(show_pivot):,} 款")
-
-            def highlight_min(row):
-                valid = row.dropna()
-                if len(valid) < 2:
-                    return ['' for _ in row]
-                min_val = valid.min()
-                return ['background-color: #D4EDDA; color: #14532D; font-weight: bold'
-                        if pd.notna(v) and v == min_val else '' for v in row]
-
-            if show_pivot.size <= 200_000:
-                st.dataframe(show_pivot.style.apply(highlight_min, axis=1).format("{:,}", na_rep=""),
-                             use_container_width=True, height=600)
-            else:
-                st.dataframe(show_pivot, use_container_width=True, height=600)
-
-    with tab_best:
-        if df_best.empty:
-            st.info("目前篩選條件下，沒有同一品名在 2 家以上供應商同時有報價的品項。")
-        else:
-            st.caption("同一品名在 2 家以上供應商有報價時，列出最低價來源與價差（依價差由大到小排序）。")
-            st.dataframe(
-                apply_vendor_style(df_best, '最低價供應商'), use_container_width=True, height=600, hide_index=True,
-                column_config={
-                    "最低價": st.column_config.NumberColumn(format="$%d"),
-                    "最高價": st.column_config.NumberColumn(format="$%d"),
-                    "價差": st.column_config.NumberColumn(format="$%d"),
-                    "價差%": st.column_config.ProgressColumn(
-                        format="%.1f%%", min_value=0,
-                        max_value=float(max(df_best['價差%'].max(), 1))),
-                },
-            )
 
     with tab_list:
         if df_display.empty:
             st.warning(no_data_msg)
         else:
             st.dataframe(
-                apply_vendor_style(df_display), use_container_width=True, height=600, hide_index=True,
-                column_order=['供應商', '品牌分類', '品名規格', '規格支數', '庫存盒數', '價格', '渠道/產地'],
+                apply_vendor_style(df_display, '供應商'), 
+                use_container_width=True, 
+                height=600, 
+                hide_index=True,
                 column_config={
-                    "價格": st.column_config.NumberColumn("整盒批發價", format="$%d"),
-                    "規格支數": st.column_config.NumberColumn("規格支數", format="%d 支"),
-                    "庫存盒數": st.column_config.NumberColumn("庫存現貨", format="%d 盒"),
-                    "品名規格": st.column_config.TextColumn(width="large"),
-                },
+                    "價格": st.column_config.NumberColumn("價格 (HKD)", format="$%d"),
+                    "庫存現貨": st.column_config.NumberColumn("庫存現貨", format="%d")
+                }
             )
-
-    with tab_chart:
-        if df_display.empty:
-            st.warning(no_data_msg)
-        else:
-            ch1, ch2 = st.columns(2)
-            with ch1:
-                st.markdown("**各品牌報價筆數**")
-                st.bar_chart(df_display['品牌分類'].value_counts(), horizontal=True, color="#2C5364")
-            with ch2:
-                st.markdown("**各供應商報價筆數**")
-                st.bar_chart(df_display['供應商'].value_counts(), horizontal=True, color="#2C5E3B")
-            st.markdown("**各品牌平均報價 (HKD)**")
-            st.bar_chart(df_display.groupby('品牌分類')['價格'].mean().round(0).sort_values(ascending=False),
-                         color="#1F4E78")
 
     with tab_other:
         others = df_display[df_display['品牌分類'] == '其他品牌']
