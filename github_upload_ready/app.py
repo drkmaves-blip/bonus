@@ -10,7 +10,7 @@ def has_secret(key):
 import io
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
 @st.cache_resource
 def get_gdrive_service():
@@ -59,6 +59,28 @@ def move_gdrive_file(file_id, new_folder_id):
         removeParents=previous_parents,
         fields='id, parents'
     ).execute()
+
+def upload_to_gdrive(folder_id, file_name, file_bytes):
+    service = get_gdrive_service()
+    fh = io.BytesIO(file_bytes)
+    media = MediaIoBaseUpload(fh, mimetype='application/octet-stream', resumable=True)
+    file_metadata = {'name': file_name, 'parents': [folder_id]}
+    service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+def delete_gdrive_file(file_id):
+    service = get_gdrive_service()
+    try:
+        # 嘗試將檔案移至垃圾桶 (需要擁有者或特定權限)
+        service.files().update(fileId=file_id, body={'trashed': True}).execute()
+    except Exception:
+        try:
+            # 如果權限不足無法移至垃圾桶，則將其從當前資料夾移除 (等於從系統中隱藏)
+            file = service.files().get(fileId=file_id, fields='parents').execute()
+            previous_parents = ",".join(file.get('parents', []))
+            service.files().update(fileId=file_id, removeParents=previous_parents, fields='id, parents').execute()
+        except Exception as e:
+            raise Exception(f"刪除失敗: {e}")
+
 
 import pandas as pd
 import openpyxl
@@ -1008,7 +1030,13 @@ else:
                 status.update(label=f"❌ 連線失敗: {str(e)}", state="error")
         if gdrive_files:
             for f in gdrive_files:
-                st.sidebar.markdown(f"📄 {f['name']}")
+                c1, c2 = st.sidebar.columns([5, 1])
+                c1.markdown(f"📄 {f['name']}")
+                if c2.button("🗑️", key=f"del_{f['id']}", help="從 Google Drive 刪除此檔案"):
+                    delete_gdrive_file(f['id'])
+                    st.rerun()
+                    
+
     else:
         st.sidebar.warning("⚠️ 尚未設定 Google Drive 連線。請參考教學配置 st.secrets。")
 # ==========================================
@@ -1109,9 +1137,9 @@ if parse_button and (uploaded_files or gdrive_files):
             for r in records:
                 all_records.append({"供應商": vendor, **r})
             status = "✅ 成功" if records else "⚠️ 無資料"
-            file_stats.append({"檔名": file.name, "供應商": vendor, "解析筆數": len(records), "狀態": status})
+            file_stats.append({"檔名": file.name, "供應商": vendor, "抓取筆數": len(records), "狀態": status})
         except Exception as e:
-            file_stats.append({"檔名": file.name, "供應商": vendor, "解析筆數": 0, "狀態": f"❌ 錯誤: {e}"})
+            file_stats.append({"檔名": file.name, "供應商": vendor, "抓取筆數": 0, "狀態": f"❌ 錯誤: {e}"})
         progress_bar.progress(current_idx / total_files,
                               text=f"正在解析本機檔案：{file.name} ({current_idx}/{total_files})")
                               
@@ -1127,12 +1155,11 @@ if parse_button and (uploaded_files or gdrive_files):
             for r in records:
                 all_records.append({"供應商": vendor, **r})
             status = "✅ 成功" if records else "⚠️ 無資料"
-            file_stats.append({"檔名": gfile['name'], "供應商": vendor, "解析筆數": len(records), "狀態": status})
+            file_stats.append({"檔名": gfile['name'], "供應商": vendor, "抓取筆數": len(records), "狀態": status})
             
-            if has_secret('GDRIVE_DONE_FOLDER_ID'):
-                move_gdrive_file(gfile['id'], st.secrets['GDRIVE_DONE_FOLDER_ID'])
+
         except Exception as e:
-            file_stats.append({"檔名": gfile['name'], "供應商": vendor, "解析筆數": 0, "狀態": f"❌ 錯誤: {e}"})
+            file_stats.append({"檔名": gfile['name'], "供應商": vendor, "抓取筆數": 0, "狀態": f"❌ 錯誤: {e}"})
         progress_bar.progress(current_idx / total_files,
                               text=f"正在解析雲端檔案：{gfile['name']} ({current_idx}/{total_files})")
 
