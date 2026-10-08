@@ -1,5 +1,12 @@
 import streamlit as st
 
+def has_secret(key):
+    try:
+        return key in st.secrets
+    except Exception:
+        return False
+
+
 import io
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -7,7 +14,7 @@ from googleapiclient.http import MediaIoBaseDownload
 
 @st.cache_resource
 def get_gdrive_service():
-    if 'gcp_service_account' not in st.secrets:
+    if not has_secret('gcp_service_account'):
         return None
     creds = service_account.Credentials.from_service_account_info(
         st.secrets['gcp_service_account'],
@@ -973,26 +980,43 @@ with st.sidebar.expander("🌍 渠道/產地對照維護", expanded=False):
         with open(CHANNEL_RULES_FILE, "rb") as f:
             st.download_button("📥 下載渠道對照檔", f, file_name=CHANNEL_RULES_FILE, mime="text/csv", use_container_width=True)
 
-st.sidebar.markdown('<div class="step-label">STEP 1 · 上傳報價單</div>', unsafe_allow_html=True)
-uploaded_files = st.sidebar.file_uploader(
-    "上傳報價單",
-    type=["xlsx", "xls", "pdf"],
-    accept_multiple_files=True,
-    help="支援 Excel (.xlsx, .xls) 與 PDF，可一次上傳多個檔案",
-    label_visibility="collapsed",
-    on_change=clear_results
-)
+st.sidebar.markdown('<div class="step-label">STEP 1 · 載入報價單</div>', unsafe_allow_html=True)
+upload_mode = st.sidebar.radio("讀取方式", ["從 Google Drive 自動抓取", "手動上傳本機檔案"], horizontal=True, label_visibility="collapsed", on_change=clear_results)
 
+uploaded_files = []
+gdrive_files = []
 
-# 過濾掉 Excel 開啟時產生的暫存鎖定檔 (~$ 開頭)
-if uploaded_files:
-    uploaded_files = [f for f in uploaded_files if not f.name.startswith("~$")]
+if upload_mode == "手動上傳本機檔案":
+    uploaded_files = st.sidebar.file_uploader(
+        "上傳報價單",
+        type=["xlsx", "xls", "pdf"],
+        accept_multiple_files=True,
+        help="支援 Excel (.xlsx, .xls) 與 PDF，可一次上傳多檔案",
+        label_visibility="collapsed",
+        on_change=clear_results
+    )
+    if uploaded_files:
+        uploaded_files = [f for f in uploaded_files if not f.name.startswith("~$")]
+else:
+    if has_secret('GDRIVE_FOLDER_ID'):
+        folder_id = st.secrets['GDRIVE_FOLDER_ID']
+        with st.sidebar.status("🔄 正在連線至 Google Drive...", expanded=False) as status:
+            try:
+                gdrive_files = list_gdrive_files(folder_id)
+                status.update(label=f"✅ 成功找到 {len(gdrive_files)} 個待處理檔案", state="complete")
+            except Exception as e:
+                status.update(label=f"❌ 連線失敗: {str(e)}", state="error")
+        if gdrive_files:
+            for f in gdrive_files:
+                st.sidebar.markdown(f"📄 {f['name']}")
+    else:
+        st.sidebar.warning("⚠️ 尚未設定 Google Drive 連線。請參考教學配置 st.secrets。")
 # ==========================================
 
 # ==========================================
 # 8. 主畫面：空狀態
 # ==========================================
-if not uploaded_files and 'df_result' not in st.session_state:
+if not uploaded_files and not gdrive_files and 'df_result' not in st.session_state:
     st.markdown("""
     <div class="empty-state">
         <div class="icon">📂</div>
@@ -1036,13 +1060,23 @@ if uploaded_files:
         <span class="desc">自動依檔名判斷 · 可點擊「供應商」欄位直接修改</span>
     </div>
     """, unsafe_allow_html=True)
-
-    file_df = pd.DataFrame([{
-        "檔名": f.name,
-        "類型": "PDF" if f.name.lower().endswith('.pdf') else "Excel",
-        "大小(KB)": round(f.size / 1024),
-        "供應商": get_standard_vendor(f.name),
-    } for f in uploaded_files])
+if uploaded_files or gdrive_files:
+    file_list_data = []
+    for f in uploaded_files:
+        file_list_data.append({
+            "檔名": f.name,
+            "類型": "PDF" if f.name.lower().endswith('.pdf') else "Excel",
+            "大小(KB)": round(f.size / 1024),
+            "供應商": get_standard_vendor(f.name),
+        })
+    for f in gdrive_files:
+        file_list_data.append({
+            "檔名": f['name'],
+            "類型": "PDF" if f['name'].lower().endswith('.pdf') else "Excel",
+            "大小(KB)": 0,
+            "供應商": get_standard_vendor(f['name']),
+        })
+    file_df = pd.DataFrame(file_list_data)
 
     edited_files = st.data_editor(
         file_df,
@@ -1056,14 +1090,18 @@ if uploaded_files:
 
     st.sidebar.markdown('<div class="step-label">STEP 2 · 開始解析</div>', unsafe_allow_html=True)
     parse_button = st.sidebar.button("🚀 開始解析並合併轉檔", use_container_width=True, type="primary")
-    st.sidebar.caption(f"📎 已選取 **{len(uploaded_files)}** 個檔案")
+    st.sidebar.caption(f"📌 共載入 **{len(uploaded_files) + len(gdrive_files)}** 個檔案")
 
-if parse_button and uploaded_files:
+if parse_button and (uploaded_files or gdrive_files):
     all_records = []
     file_stats = []
     progress_bar = st.progress(0, text="⏳ 正在解析檔案...")
 
-    for idx, file in enumerate(uploaded_files):
+    total_files = len(uploaded_files) + len(gdrive_files)
+    current_idx = 0
+
+    for file in uploaded_files:
+        current_idx += 1
         vendor = (vendor_map.get(file.name) or get_standard_vendor(file.name)).strip()
         file_ext = file.name.rsplit('.', 1)[-1].lower()
         try:
@@ -1071,11 +1109,32 @@ if parse_button and uploaded_files:
             for r in records:
                 all_records.append({"供應商": vendor, **r})
             status = "✅ 成功" if records else "⚠️ 無資料"
-            file_stats.append({"檔名": file.name, "供應商": vendor, "抓取筆數": len(records), "狀態": status})
+            file_stats.append({"檔名": file.name, "供應商": vendor, "解析筆數": len(records), "狀態": status})
         except Exception as e:
-            file_stats.append({"檔名": file.name, "供應商": vendor, "抓取筆數": 0, "狀態": f"❌ {e}"})
-        progress_bar.progress((idx + 1) / len(uploaded_files),
-                              text=f"正在解析：{file.name} ({idx+1}/{len(uploaded_files)})")
+            file_stats.append({"檔名": file.name, "供應商": vendor, "解析筆數": 0, "狀態": f"❌ 錯誤: {e}"})
+        progress_bar.progress(current_idx / total_files,
+                              text=f"正在解析本機檔案：{file.name} ({current_idx}/{total_files})")
+                              
+    for gfile in gdrive_files:
+        current_idx += 1
+        vendor = (vendor_map.get(gfile['name']) or get_standard_vendor(gfile['name'])).strip()
+        file_ext = gfile['name'].rsplit('.', 1)[-1].lower()
+        try:
+            progress_bar.progress((current_idx - 0.5) / total_files, text=f"正在下載雲端檔案：{gfile['name']}...")
+            downloaded_file = download_gdrive_file(gfile['id'], gfile['name'])
+            
+            records = parse_file_v28(downloaded_file.read(), file_ext)
+            for r in records:
+                all_records.append({"供應商": vendor, **r})
+            status = "✅ 成功" if records else "⚠️ 無資料"
+            file_stats.append({"檔名": gfile['name'], "供應商": vendor, "解析筆數": len(records), "狀態": status})
+            
+            if has_secret('GDRIVE_DONE_FOLDER_ID'):
+                move_gdrive_file(gfile['id'], st.secrets['GDRIVE_DONE_FOLDER_ID'])
+        except Exception as e:
+            file_stats.append({"檔名": gfile['name'], "供應商": vendor, "解析筆數": 0, "狀態": f"❌ 錯誤: {e}"})
+        progress_bar.progress(current_idx / total_files,
+                              text=f"正在解析雲端檔案：{gfile['name']} ({current_idx}/{total_files})")
 
     progress_bar.empty()
 
